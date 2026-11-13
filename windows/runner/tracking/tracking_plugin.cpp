@@ -118,6 +118,16 @@ class TrackingPluginImpl : public TrackingPlugin {
            flutter::EncodableValue(
                "Windows uses desktop capture APIs; protected content may fail.")},
       }));
+    } else if (method == "requestPermissions") {
+      result->Success(flutter::EncodableValue(flutter::EncodableMap{
+          {flutter::EncodableValue("screenCapture"),
+           flutter::EncodableValue("available")},
+          {flutter::EncodableValue("accessibility"),
+           flutter::EncodableValue("not_required")},
+          {flutter::EncodableValue("notes"),
+           flutter::EncodableValue(
+               "Windows permissions are managed by OS privacy settings.")},
+      }));
     } else if (method == "showDesktopNotice") {
       const auto* args =
           std::get_if<flutter::EncodableMap>(call.arguments());

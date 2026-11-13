@@ -71,7 +71,9 @@ Future<void> showCreateProjectDialog(
                                   shape: BoxShape.circle,
                                   border: Border.all(
                                     color: color == c
-                                        ? Theme.of(context).colorScheme.onSurface
+                                        ? Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
                                         : Colors.transparent,
                                     width: 2,
                                   ),
@@ -93,12 +95,13 @@ Future<void> showCreateProjectDialog(
               FilledButton(
                 onPressed: () async {
                   if (!formKey.currentState!.validate()) return;
-                  final project =
-                      await ref.read(projectRepositoryProvider).createProject(
-                            workspaceId: workspaceId,
-                            name: nameController.text.trim(),
-                            color: color,
-                          );
+                  final project = await ref
+                      .read(projectRepositoryProvider)
+                      .createProject(
+                        workspaceId: workspaceId,
+                        name: nameController.text.trim(),
+                        color: color,
+                      );
                   // Project only — user must create a task before Start is enabled.
                   ref
                       .read(trackingControllerProvider.notifier)
@@ -117,12 +120,13 @@ Future<void> showCreateProjectDialog(
     },
   );
 
-  nameController.dispose();
-  descController.dispose();
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    nameController.dispose();
+    descController.dispose();
+  });
   if (created == true && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Project created')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Project created')));
   }
 }
 
@@ -184,10 +188,13 @@ Future<void> showCreateTaskDialog(
               );
               final project = await repo.getProject(projectId);
               final live = ref.read(trackingControllerProvider);
-              final projectName = project?.name ??
+              final projectName =
+                  project?.name ??
                   (live.projectId == projectId ? live.projectName : null) ??
                   'Project';
-              await ref.read(trackingControllerProvider.notifier).focusWork(
+              await ref
+                  .read(trackingControllerProvider.notifier)
+                  .focusWork(
                     projectId: projectId,
                     projectName: projectName,
                     taskId: task.id,
@@ -203,11 +210,12 @@ Future<void> showCreateTaskDialog(
     },
   );
 
-  nameController.dispose();
-  notesController.dispose();
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    nameController.dispose();
+    notesController.dispose();
+  });
   if (created == true && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Task created')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Task created')));
   }
 }

@@ -4,16 +4,34 @@ import 'package:go_router/go_router.dart';
 import 'package:witrack/data/providers.dart';
 import 'package:witrack/platform/tracking_engine.dart';
 
-final permissionSnapshotProvider =
-    FutureProvider<PermissionStatusSnapshot>((ref) {
+final permissionSnapshotProvider = FutureProvider<PermissionStatusSnapshot>((
+  ref,
+) {
   return ref.watch(trackingEngineProvider).permissionStatus();
 });
 
-class PermissionsScreen extends ConsumerWidget {
+class PermissionsScreen extends ConsumerStatefulWidget {
   const PermissionsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PermissionsScreen> createState() => _PermissionsScreenState();
+}
+
+class _PermissionsScreenState extends ConsumerState<PermissionsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(_requestPermissions);
+  }
+
+  Future<void> _requestPermissions() async {
+    await ref.read(trackingEngineProvider).requestPermissions(prompt: true);
+    if (!mounted) return;
+    ref.invalidate(permissionSnapshotProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final snapshot = ref.watch(permissionSnapshotProvider);
     final theme = Theme.of(context);
 
@@ -32,7 +50,8 @@ class PermissionsScreen extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.all(28),
                 child: snapshot.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (e, _) => Text('Permission check failed: $e'),
                   data: (status) => Column(
                     mainAxisSize: MainAxisSize.min,
@@ -52,21 +71,24 @@ class PermissionsScreen extends ConsumerWidget {
                       _PermissionRow(
                         title: 'Screen capture',
                         status: status.screenCapture,
-                        why:
-                            'Used for screenshots during authorized tracking sessions.',
+                        why: 'Used for screenshots during authorized tracking sessions.',
                       ),
                       const SizedBox(height: 12),
                       _PermissionRow(
                         title: 'Accessibility / input monitoring',
                         status: status.accessibility,
-                        why:
-                            'Only if required by the OS for idle/activity signals.',
+                        why: 'Only if required by the OS for idle/activity signals.',
                       ),
                       const SizedBox(height: 16),
                       Text(status.notes, style: theme.textTheme.bodySmall),
                       const SizedBox(height: 24),
                       Row(
                         children: [
+                          OutlinedButton(
+                            onPressed: _requestPermissions,
+                            child: const Text('Request now'),
+                          ),
+                          const SizedBox(width: 10),
                           OutlinedButton(
                             onPressed: () =>
                                 ref.invalidate(permissionSnapshotProvider),
@@ -78,7 +100,9 @@ class PermissionsScreen extends ConsumerWidget {
                               final current = await ref
                                   .read(settingsRepositoryProvider)
                                   .load();
-                              await ref.read(settingsRepositoryProvider).save(
+                              await ref
+                                  .read(settingsRepositoryProvider)
+                                  .save(
                                     current.copyWith(onboardingCompleted: true),
                                   );
                               if (context.mounted) {

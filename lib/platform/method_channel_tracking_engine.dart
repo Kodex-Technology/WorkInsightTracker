@@ -113,19 +113,18 @@ class MethodChannelTrackingEngine implements TrackingEngine {
   Future<PermissionStatusSnapshot> permissionStatus() async {
     _ensureDesktop();
     final raw = await _methods.invokeMethod<dynamic>('permissionStatus');
-    if (raw is! Map) {
-      return const PermissionStatusSnapshot(
-        screenCapture: 'unknown',
-        accessibility: 'unknown',
-        notes: 'Native permission probe unavailable',
-      );
-    }
-    final map = Map<String, dynamic>.from(raw);
-    return PermissionStatusSnapshot(
-      screenCapture: map['screenCapture'] as String? ?? 'unknown',
-      accessibility: map['accessibility'] as String? ?? 'unknown',
-      notes: map['notes'] as String? ?? '',
-    );
+    return _toPermissionSnapshot(raw);
+  }
+
+  @override
+  Future<PermissionStatusSnapshot> requestPermissions({
+    bool prompt = false,
+  }) async {
+    _ensureDesktop();
+    final raw = await _methods.invokeMethod<dynamic>('requestPermissions', {
+      'prompt': prompt,
+    });
+    return _toPermissionSnapshot(raw);
   }
 
   @override
@@ -211,5 +210,21 @@ class MethodChannelTrackingEngine implements TrackingEngine {
       default:
         return TrackingStatus.stopped;
     }
+  }
+
+  PermissionStatusSnapshot _toPermissionSnapshot(dynamic raw) {
+    if (raw is! Map) {
+      return const PermissionStatusSnapshot(
+        screenCapture: 'unknown',
+        accessibility: 'unknown',
+        notes: 'Native permission probe unavailable',
+      );
+    }
+    final map = Map<String, dynamic>.from(raw);
+    return PermissionStatusSnapshot(
+      screenCapture: map['screenCapture'] as String? ?? 'unknown',
+      accessibility: map['accessibility'] as String? ?? 'unknown',
+      notes: map['notes'] as String? ?? '',
+    );
   }
 }

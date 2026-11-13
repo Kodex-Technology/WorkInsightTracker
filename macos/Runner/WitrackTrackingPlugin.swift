@@ -44,6 +44,10 @@ final class WitrackTrackingPlugin: NSObject {
       result(engine.captureDisplays())
     case "permissionStatus":
       result(engine.permissionStatus())
+    case "requestPermissions":
+      let args = call.arguments as? [String: Any] ?? [:]
+      let prompt = args["prompt"] as? Bool ?? false
+      result(engine.requestPermissions(prompt: prompt))
     case "showDesktopNotice":
       let args = call.arguments as? [String: Any] ?? [:]
       let title = args["title"] as? String ?? "Witrack"
@@ -195,7 +199,8 @@ private final class MacTrackingEngine {
     if running { return true }
     running = true
     status = .tracking
-    DispatchQueue.main.async {
+    DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
       self.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
         self?.tick()
       }
@@ -278,6 +283,19 @@ private final class MacTrackingEngine {
     ]
   }
 
+  func requestPermissions(prompt: Bool) -> [String: Any] {
+    if prompt {
+      if #available(macOS 10.15, *) {
+        if !CGPreflightScreenCaptureAccess() {
+          _ = CGRequestScreenCaptureAccess()
+        }
+      }
+      let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+      _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
+    }
+    return permissionStatus()
+  }
+
   func captureDisplays() -> [[String: Any]] {
     if #available(macOS 10.15, *) {
       if !CGPreflightScreenCaptureAccess() {
@@ -327,9 +345,13 @@ private final class MacTrackingEngine {
   }
 
   private func currentIdleSeconds() -> Int {
-    let idle = CGEventSourceSecondsSinceLastEventType(
+    // kCGAnyInputEventType is represented as UInt32.max.
+    guard let anyInputEventType = CGEventType(rawValue: UInt32.max) else {
+      return 0
+    }
+    let idle = CGEventSource.secondsSinceLastEventType(
       .combinedSessionState,
-      .any
+      eventType: anyInputEventType
     )
     if idle.isInfinite || idle.isNaN {
       return 0

@@ -85,5 +85,6 @@ abstract class TrackingEngine {
   });
   Future<List<CapturedDisplayImage>> captureDisplays();
   Future<PermissionStatusSnapshot> permissionStatus();
+  Future<PermissionStatusSnapshot> requestPermissions({bool prompt = false});
   Future<void> dispose();
 }
