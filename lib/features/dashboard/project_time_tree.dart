@@ -15,24 +15,29 @@ import 'package:witrack/features/tracking/tracking_controller.dart';
 final todaySessionsProvider = StreamProvider<List<TrackingSession>>((ref) {
   final user = ref.watch(authControllerProvider).user;
   if (user == null) return Stream.value(const []);
-  return ref.watch(sessionRepositoryProvider).watchSessionsForLocalDay(
-        userId: user.id,
-        localDay: DateTime.now(),
-      );
+  return ref
+      .watch(sessionRepositoryProvider)
+      .watchSessionsForLocalDay(userId: user.id, localDay: DateTime.now());
 });
 
-final projectsProvider =
-    StreamProvider.family<List<Project>, String>((ref, workspaceId) {
+final projectsProvider = StreamProvider.family<List<Project>, String>((
+  ref,
+  workspaceId,
+) {
   return ref.watch(projectRepositoryProvider).watchActiveProjects(workspaceId);
 });
 
-final tasksProvider =
-    StreamProvider.family<List<Task>, String>((ref, projectId) {
+final tasksProvider = StreamProvider.family<List<Task>, String>((
+  ref,
+  projectId,
+) {
   return ref.watch(projectRepositoryProvider).watchTasks(projectId);
 });
 
-final completedTasksProvider =
-    StreamProvider.family<List<Task>, String>((ref, projectId) {
+final completedTasksProvider = StreamProvider.family<List<Task>, String>((
+  ref,
+  projectId,
+) {
   return ref.watch(projectRepositoryProvider).watchCompletedTasks(projectId);
 });
 
@@ -75,9 +80,7 @@ final completedTodayProvider = Provider<List<CompletedTodayRow>>((ref) {
       if (s.taskId != taskId) continue;
       final started = s.startedAt.toLocal();
       if (started.isBefore(start) || !started.isBefore(end)) continue;
-      sum += Duration(
-        milliseconds: s.activeMs + s.idleMs + s.pausedMs,
-      );
+      sum += Duration(milliseconds: s.activeMs + s.idleMs + s.pausedMs);
     }
     return sum;
   }
@@ -86,7 +89,7 @@ final completedTodayProvider = Provider<List<CompletedTodayRow>>((ref) {
   for (final project in projects) {
     final completed =
         ref.watch(completedTasksProvider(project.id)).asData?.value ??
-            const <Task>[];
+        const <Task>[];
     for (final task in completed) {
       rows.add(
         CompletedTodayRow(
@@ -114,7 +117,8 @@ final dayTimeTreeBaseProvider = Provider<DayTimeTree>((ref) {
   final liveStatus = ref.watch(
     trackingControllerProvider.select((s) => s.status),
   );
-  final open = liveStatus == TrackingStatus.tracking ||
+  final open =
+      liveStatus == TrackingStatus.tracking ||
       liveStatus == TrackingStatus.idle ||
       liveStatus == TrackingStatus.paused;
 
@@ -122,7 +126,7 @@ final dayTimeTreeBaseProvider = Provider<DayTimeTree>((ref) {
   final projects = workspaceId == null
       ? const <Project>[]
       : (ref.watch(projectsProvider(workspaceId)).asData?.value ??
-          const <Project>[]);
+            const <Project>[]);
 
   final tasksByProject = <String, List<Task>>{
     for (final p in projects)
@@ -149,8 +153,8 @@ class BrowseProjectController extends Notifier<String?> {
 /// Project highlighted in the tasks pane (browse). Live timer follows task clicks only.
 final browseProjectIdProvider =
     NotifierProvider<BrowseProjectController, String?>(
-  BrowseProjectController.new,
-);
+      BrowseProjectController.new,
+    );
 
 class ProjectTimeTreePanel extends ConsumerWidget {
   const ProjectTimeTreePanel({super.key});
@@ -173,11 +177,11 @@ class ProjectTimeTreePanel extends ConsumerWidget {
     final status = ref.watch(
       trackingControllerProvider.select((s) => s.status),
     );
-    final open = status == TrackingStatus.tracking ||
+    final open =
+        status == TrackingStatus.tracking ||
         status == TrackingStatus.idle ||
         status == TrackingStatus.paused;
-    final browseProject =
-        ref.watch(browseProjectIdProvider) ?? liveProject;
+    final browseProject = ref.watch(browseProjectIdProvider) ?? liveProject;
 
     final tree = ref.watch(dayTimeTreeBaseProvider);
     final completed = ref.watch(completedTodayProvider);
@@ -218,9 +222,7 @@ class ProjectTimeTreePanel extends ConsumerWidget {
                       open
                           ? 'Click a task to switch — you’ll confirm first'
                           : 'Click a task to start · same as Start',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: muted,
-                      ),
+                      style: theme.textTheme.bodySmall?.copyWith(color: muted),
                     ),
                   ],
                 ),
@@ -256,10 +258,10 @@ class ProjectTimeTreePanel extends ConsumerWidget {
                 onPressed: workspaceId == null
                     ? null
                     : () => showCreateProjectDialog(
-                          context,
-                          ref,
-                          workspaceId: workspaceId,
-                        ),
+                        context,
+                        ref,
+                        workspaceId: workspaceId,
+                      ),
               ),
               const SizedBox(width: 8),
               _TinyAction(
@@ -269,10 +271,10 @@ class ProjectTimeTreePanel extends ConsumerWidget {
                 onPressed: browseProject == null
                     ? null
                     : () => showCreateTaskDialog(
-                          context,
-                          ref,
-                          projectId: browseProject,
-                        ),
+                        context,
+                        ref,
+                        projectId: browseProject,
+                      ),
               ),
             ],
           ),
@@ -285,8 +287,9 @@ class ProjectTimeTreePanel extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(14),
                 color: isDark
                     ? const Color(0xFF0A1C2A)
-                    : theme.colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.45),
+                    : theme.colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.45,
+                      ),
                 border: Border.all(
                   color: theme.dividerColor.withValues(alpha: 0.8),
                 ),
@@ -322,8 +325,7 @@ class ProjectTimeTreePanel extends ConsumerWidget {
                           itemCount: tree.projects.length,
                           itemBuilder: (context, i) {
                             final project = tree.projects[i];
-                            final selected =
-                                browseProject == project.projectId;
+                            final selected = browseProject == project.projectId;
                             final trackingHere =
                                 open && liveProject == project.projectId;
                             return _QuietRow(
@@ -400,7 +402,7 @@ class ProjectTimeTreePanel extends ConsumerWidget {
                                     final task = node.tasks[i];
                                     final selected =
                                         liveProject == node.projectId &&
-                                            selectedTask == task.taskId;
+                                        selectedTask == task.taskId;
                                     final taskId = task.taskId;
                                     if (taskId == null) {
                                       return const SizedBox.shrink();
@@ -490,7 +492,9 @@ class ProjectTimeTreePanel extends ConsumerWidget {
     ref.read(browseProjectIdProvider.notifier).select(project.projectId);
     // Never start or resegment from project click.
     if (open) return;
-    ref.read(trackingControllerProvider.notifier).selectProjectOnly(
+    ref
+        .read(trackingControllerProvider.notifier)
+        .selectProjectOnly(
           projectId: project.projectId,
           projectName: project.name,
         );
@@ -517,7 +521,9 @@ class ProjectTimeTreePanel extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    await ref.read(trackingControllerProvider.notifier).focusWork(
+    await ref
+        .read(trackingControllerProvider.notifier)
+        .focusWork(
           projectId: projectId,
           projectName: projectName,
           taskId: taskId,
@@ -564,9 +570,8 @@ class ProjectTimeTreePanel extends ConsumerWidget {
     await ref.read(projectRepositoryProvider).archiveProject(projectId);
     await tracking.retargetAfterProjectGone(projectId);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Deleted $name')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Deleted $name')));
     }
   }
 
@@ -607,9 +612,8 @@ class ProjectTimeTreePanel extends ConsumerWidget {
     await ref.read(projectRepositoryProvider).archiveTask(taskId);
     await tracking.retargetAfterTaskGone(taskId);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Deleted $name')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Deleted $name')));
     }
   }
 
@@ -641,7 +645,9 @@ class ProjectTimeTreePanel extends ConsumerWidget {
     CompletedTodayRow row,
   ) async {
     await ref.read(projectRepositoryProvider).reopenTask(row.taskId);
-    await ref.read(trackingControllerProvider.notifier).focusWork(
+    await ref
+        .read(trackingControllerProvider.notifier)
+        .focusWork(
           projectId: row.projectId,
           projectName: row.projectName,
           taskId: row.taskId,
@@ -649,9 +655,8 @@ class ProjectTimeTreePanel extends ConsumerWidget {
           startIfStopped: false,
         );
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Reopened ${row.taskName}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Reopened ${row.taskName}')));
     }
   }
 }
@@ -711,7 +716,7 @@ class _ProjectPickerChip extends StatelessWidget {
           PopupMenuItem<String>(
             value: project.projectId,
             child: SizedBox(
-              width: 260,
+              width: double.infinity,
               child: Row(
                 children: [
                   Icon(
@@ -753,12 +758,20 @@ class _ProjectPickerChip extends StatelessWidget {
             value: 'del:${selected!.projectId}',
             child: Row(
               children: [
-                Icon(Icons.delete_outline, size: 18, color: theme.colorScheme.error),
+                Icon(
+                  Icons.delete_outline,
+                  size: 18,
+                  color: theme.colorScheme.error,
+                ),
                 const SizedBox(width: 10),
-                Text(
-                  'Delete “${selected!.name}”',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.error,
+                Expanded(
+                  child: Text(
+                    'Delete “${selected!.name}”',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
                   ),
                 ),
               ],
@@ -774,9 +787,7 @@ class _ProjectPickerChip extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(11),
           color: isDark ? const Color(0xFF0E2433) : theme.colorScheme.surface,
-          border: Border.all(
-            color: theme.dividerColor.withValues(alpha: 0.95),
-          ),
+          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.95)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -849,15 +860,15 @@ class _TinyAction extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(0, 40),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        foregroundColor: enabled ? theme.colorScheme.onSurface : theme.disabledColor,
+        foregroundColor: enabled
+            ? theme.colorScheme.onSurface
+            : theme.disabledColor,
         side: BorderSide(
           color: enabled
               ? theme.dividerColor.withValues(alpha: 0.95)
               : theme.dividerColor.withValues(alpha: 0.45),
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(11),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
       ),
       icon: Icon(icon, size: 16),
       label: Text(label),
@@ -926,11 +937,7 @@ class _CompletedRow extends StatelessWidget {
 }
 
 class _Pane extends StatelessWidget {
-  const _Pane({
-    required this.title,
-    required this.child,
-    this.trailing,
-  });
+  const _Pane({required this.title, required this.child, this.trailing});
 
   final String title;
   final Widget child;
@@ -975,10 +982,7 @@ class _Pane extends StatelessWidget {
               ],
             ),
           ),
-          Divider(
-            height: 1,
-            color: theme.dividerColor.withValues(alpha: 0.65),
-          ),
+          Divider(height: 1, color: theme.dividerColor.withValues(alpha: 0.65)),
           Expanded(child: child),
         ],
       ),
@@ -1022,9 +1026,7 @@ class _QuietRow extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(12, 9, 4, 9),
           decoration: BoxDecoration(
-            color: selected
-                ? accent.withValues(alpha: 0.08)
-                : null,
+            color: selected ? accent.withValues(alpha: 0.08) : null,
             border: Border(
               left: BorderSide(
                 width: 3,
@@ -1112,9 +1114,8 @@ class _LiveSegmentClock extends ConsumerWidget {
         : Duration.zero;
     return Text(
       formatClock(base + live),
-      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
+      style: Theme.of(context).textTheme.labelLarge
+          ?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
     );
   }
 }

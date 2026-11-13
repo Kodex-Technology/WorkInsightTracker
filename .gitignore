@@ -35,3 +35,8 @@ admin/node_modules/
 admin/dist/
 server/.env
 admin/.env
+
+# FVM Version Cache
+.fvm/
+.flutter-plugins-dependencies
+.fvmrc
