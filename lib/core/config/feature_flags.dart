@@ -3,7 +3,7 @@
 /// Override with `--dart-define=ENABLE_*=true|false`.
 /// Defaults keep local tracking useful; backend sync stays off until adapters exist.
 ///
-/// See docs/architecture/future-backend-integration.md and tracking-policies.md.
+/// See docs/architecture/backend-api.md and tracking-policies.md.
 abstract final class FeatureFlags {
   /// Day / week / month calendar progress module.
   static const bool enableCalendar = bool.fromEnvironment(
@@ -23,16 +23,10 @@ abstract final class FeatureFlags {
     defaultValue: true,
   );
 
-  /// Reports screen (activity insights).
-  static const bool enableReports = bool.fromEnvironment(
-    'ENABLE_REPORTS',
-    defaultValue: true,
-  );
-
-  /// Timeline screen.
+  /// Timeline screen (route kept; nav tab hidden unless explicitly enabled).
   static const bool enableTimeline = bool.fromEnvironment(
     'ENABLE_TIMELINE',
-    defaultValue: true,
+    defaultValue: false,
   );
 
   /// Projects management screen (create/list outside dashboard tree).

@@ -4,7 +4,9 @@
 
 Windows idle age comes from **`GetLastInputInfo`**. That API provides time since last input — **not** discrete keyboard/mouse event counts.
 
-Do **not** fabricate separate key/mouse counts.
+Do **not** fabricate separate key/mouse counts. Productivity and screenshot
+detail use **input-activity pulses** (`isActiveSignal == true` samples) and
+**app/focus switches** already stored in Drift — never raw click streams.
 
 Each 10-second evaluation persists:
 

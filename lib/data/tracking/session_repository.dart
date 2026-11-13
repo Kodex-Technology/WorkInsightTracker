@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 import 'package:witrack/data/database/app_database.dart';
+import 'package:witrack/data/tracking/productivity.dart';
 
 class SessionRepository {
   SessionRepository(this._db);
@@ -217,6 +218,90 @@ class SessionRepository {
           ..where((t) => t.sessionId.equals(sessionId))
           ..orderBy([(t) => OrderingTerm.asc(t.startedAt)]))
         .get();
+  }
+
+  /// Productivity + event rollup for one screenshot interval (existing tables only).
+  Future<ScreenshotProductivity> productivityForWindow({
+    required String sessionId,
+    required DateTime windowStart,
+    required DateTime windowEnd,
+  }) async {
+    final start = windowStart.toUtc();
+    final end = windowEnd.toUtc();
+
+    final samples = await (_db.select(_db.activitySamples)
+          ..where(
+            (t) =>
+                t.sessionId.equals(sessionId) &
+                t.sampledAt.isBiggerOrEqualValue(start) &
+                t.sampledAt.isSmallerThanValue(end),
+          )
+          ..orderBy([(t) => OrderingTerm.asc(t.sampledAt)]))
+        .get();
+
+    final events = await (_db.select(_db.sessionEvents)
+          ..where(
+            (t) =>
+                t.sessionId.equals(sessionId) &
+                t.at.isBiggerOrEqualValue(start) &
+                t.at.isSmallerThanValue(end),
+          )
+          ..orderBy([(t) => OrderingTerm.asc(t.at)]))
+        .get();
+
+    final apps = await (_db.select(_db.appUsageIntervals)
+          ..where(
+            (t) =>
+                t.sessionId.equals(sessionId) &
+                t.startedAt.isBiggerOrEqualValue(start) &
+                t.startedAt.isSmallerThanValue(end),
+          )
+          ..orderBy([(t) => OrderingTerm.asc(t.startedAt)]))
+        .get();
+
+    final active = samples.where((s) => s.isActiveSignal).length;
+    final total = samples.length;
+    final idleEnters = events.where((e) => e.type == 'state:idle').length;
+
+    final appCounts = <String, int>{};
+    for (final app in apps) {
+      appCounts[app.appName] = (appCounts[app.appName] ?? 0) + 1;
+    }
+    final appStats = appCounts.entries
+        .map((e) => AppFocusStat(name: e.key, count: e.value))
+        .toList()
+      ..sort((a, b) => b.count.compareTo(a.count));
+
+    final detail = <ProductivityEvent>[
+      for (final e in events)
+        ProductivityEvent(
+          at: e.at,
+          type: e.type,
+          label: e.payload,
+        ),
+      for (final app in apps)
+        ProductivityEvent(
+          at: app.startedAt,
+          type: 'app_switch',
+          label: app.appName,
+        ),
+    ]..sort((a, b) => a.at.compareTo(b.at));
+
+    // Cap detail list for UI/storage size — keep newest-most of the window.
+    final capped = detail.length > 80 ? detail.sublist(detail.length - 80) : detail;
+
+    return ScreenshotProductivity(
+      percent: productivityPercent(activeSamples: active, totalSamples: total),
+      activeSamples: active,
+      totalSamples: total,
+      inputPulses: active,
+      appSwitches: apps.length,
+      idleEnters: idleEnters,
+      windowStart: start,
+      windowEnd: end,
+      events: capped,
+      apps: appStats,
+    );
   }
 
   Future<Duration> trackedToday(String userId) async {

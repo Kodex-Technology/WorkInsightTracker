@@ -41,12 +41,7 @@ class AppShell extends ConsumerWidget {
     }
     return [
       const _NavItem('Dashboard', Icons.grid_view_rounded, '/app/dashboard'),
-      if (flags.isOn(FeatureId.timeline))
-        const _NavItem(
-          'Timeline',
-          Icons.view_timeline_outlined,
-          '/app/timeline',
-        ),
+      // Timeline route/screen kept; tab intentionally omitted from nav.
       if (flags.isOn(FeatureId.screenshots))
         const _NavItem(
           'Screenshots',
@@ -59,10 +54,7 @@ class AppShell extends ConsumerWidget {
           Icons.calendar_month_outlined,
           '/app/calendar',
         ),
-      if (flags.isOn(FeatureId.reports))
-        const _NavItem('Reports', Icons.insights_outlined, '/app/reports'),
-      if (flags.isOn(FeatureId.projectsScreen))
-        const _NavItem('Projects', Icons.folder_outlined, '/app/projects'),
+      // Projects management screen kept; sidebar entry hidden for cleaner IA.
     ];
   }
 

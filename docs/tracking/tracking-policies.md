@@ -17,6 +17,9 @@ Any new default must be added here **before** implementation.
 | Input tracking | Non-content activity signals only |
 | Activity signal source (Windows) | `GetLastInputInfo` idle age; **no fabricated key/mouse counts** |
 | Activity sample fields | `secondsSinceLastInput`, `isActiveSignal` (idle age under 10s), `foregroundApp` |
+| Screenshot productivity | **Active sample %** over the interval since previous capture (or session start): `activeSamples / totalSamples × 100` |
+| Screenshot event detail | Interval summary only: input-activity pulses, app/focus switches, idle enters, session events — **no** key/mouse content, **no** fabricated click counters |
+| Task productivity | Average of that task’s screenshot productivity scores for the filtered day (when screenshots exist) |
 | Keystroke content | **Never** recorded |
 | Window titles | **Not stored** in the current vertical slice (process name only) |
 | Clipboard / passwords | **Never** collected |

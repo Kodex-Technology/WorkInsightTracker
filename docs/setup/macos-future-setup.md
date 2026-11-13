@@ -1,22 +1,24 @@
-# macOS future setup
+# macOS setup
 
-Phase 1 includes `macos/` scaffolding. Google → Firebase auth uses the **same Dart PKCE loopback flow** as Windows (`http://127.0.0.1:<port>/callback`). No custom URL scheme is required for the primary callback.
+Flutter `macos/` ships a **Swift MethodChannel engine** (`WitrackTrackingPlugin.swift`) matching Windows methods: start/pause/resume/stop/poll/updatePolicies/captureDisplays/permissionStatus/showDesktopNotice.
 
-## Auth verification checklist (runtime — pending until run on a Mac)
+## Honest status
 
-1. Fill `config/dev.json` with the macOS/web Firebase app ids as registered.
-2. `flutter run -d macos --dart-define-from-file=config/dev.json`
-3. Continue with Google → system browser → consent → loopback success page → app session.
-4. Quit/relaunch → Firebase session restores; local Drift data still keyed by stable local user id.
-5. Confirm Screen Recording / Accessibility prompts still work for tracking.
+**Not 100% feature-guaranteed** until runtime QA on a Mac. Full matrix: [weaknesses-and-readiness.md](../planning/weaknesses-and-readiness.md).
 
-Mark macOS auth **passed** only after steps 3–5 succeed on Apple hardware. Windows-only development leaves this **pending**.
+## Run
 
-## Later native work
+```bash
+flutter run -d macos
+```
 
-1. Xcode + CocoaPods as required by Flutter
-2. Implement Swift TrackingEngine conforming to Pigeon API
-3. Request Screen Recording / Accessibility permissions with UX copy
-4. NSStatusItem parity with Windows tray
+Accept **Screen Recording** (screenshots) and grant **Accessibility** if prompted (input idle reliability).
 
-Do not fork domain or UI for macOS — only the native adapter. External backends must use provider adapters; never call remote services from the native tracking engine.
+## Later polish
+
+1. ScreenCaptureKit instead of deprecated `CGWindowListCreateImage`  
+2. `NSStatusItem` tray parity  
+3. Lock/sleep signals (same gap as Windows)  
+4. Production Google/OIDC when backend auth is live  
+
+Do not fork Dart domain/UI for macOS — only the native adapter. Never call remote APIs from native tracking.

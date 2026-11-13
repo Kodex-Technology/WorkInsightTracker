@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:witrack/core/theme/witrack_colors.dart';
 import 'package:witrack/data/tracking/time_totals.dart';
 import 'package:witrack/domain/tracking/tracking_state.dart';
 import 'package:witrack/features/dashboard/project_time_tree.dart';
@@ -45,6 +44,13 @@ class LiveSessionTimer extends ConsumerWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final muted = theme.colorScheme.onSurfaceVariant;
+    final accent = theme.colorScheme.primary;
+    final panelBg = isDark
+        ? Color.alphaBlend(
+            accent.withValues(alpha: 0.06),
+            const Color(0xFF0A1C2A),
+          )
+        : const Color(0xFFF1F5F9).withValues(alpha: 0.95);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,12 +60,13 @@ class LiveSessionTimer extends ConsumerWidget {
           style: theme.textTheme.displaySmall?.copyWith(
             fontFeatures: const [FontFeature.tabularFigures()],
             fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
+            letterSpacing: 1.6,
             height: 1.0,
             fontSize: 44,
+            color: theme.colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Row(
           children: [
             Icon(
@@ -67,13 +74,13 @@ class LiveSessionTimer extends ConsumerWidget {
                   ? Icons.radio_button_unchecked
                   : Icons.task_alt_rounded,
               size: 16,
-              color: muted,
+              color: taskName == null ? muted : accent,
             ),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
                 taskName == null
-                    ? 'Select a task to enable Start'
+                    ? 'Select a task below to start'
                     : '${projectName ?? 'Project'} · $taskName',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -85,26 +92,26 @@ class LiveSessionTimer extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 18),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: isDark
-                ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35)
-                : const Color(0xFFF1F5F9).withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(14),
+            color: panelBg,
             border: Border.all(
-              color: theme.dividerColor.withValues(alpha: 0.7),
+              color: isDark
+                  ? theme.dividerColor.withValues(alpha: 0.9)
+                  : theme.dividerColor.withValues(alpha: 0.75),
             ),
           ),
           child: Row(
             children: [
               Expanded(
                 child: _MiniStat(
-                  label: 'Today (all work)',
+                  label: 'Today',
                   value: formatClock(today),
-                  emphasis: true,
+                  emphasize: true,
                 ),
               ),
               _StatDivider(color: theme.dividerColor),
@@ -144,9 +151,9 @@ class _StatDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 1,
-      height: 36,
-      margin: const EdgeInsets.symmetric(horizontal: 6),
-      color: color.withValues(alpha: 0.55),
+      height: 40,
+      margin: const EdgeInsets.symmetric(horizontal: 10),
+      color: color.withValues(alpha: 0.4),
     );
   }
 }
@@ -155,19 +162,17 @@ class _MiniStat extends StatelessWidget {
   const _MiniStat({
     required this.label,
     required this.value,
-    this.emphasis = false,
+    this.emphasize = false,
   });
 
   final String label;
   final String value;
-  final bool emphasis;
+  final bool emphasize;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = emphasis
-        ? WitrackColors.success
-        : theme.colorScheme.onSurfaceVariant;
+    final muted = theme.colorScheme.onSurfaceVariant;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -176,17 +181,21 @@ class _MiniStat extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: theme.textTheme.labelSmall?.copyWith(
-            color: color,
+            color: muted,
             fontWeight: FontWeight.w600,
+            letterSpacing: 0.35,
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 5),
         Text(
           value,
           style: theme.textTheme.titleSmall?.copyWith(
             fontFeatures: const [FontFeature.tabularFigures()],
             fontWeight: FontWeight.w700,
-            color: emphasis ? WitrackColors.success : theme.colorScheme.onSurface,
+            letterSpacing: 0.2,
+            color: emphasize
+                ? theme.colorScheme.onSurface
+                : theme.colorScheme.onSurface.withValues(alpha: 0.92),
           ),
         ),
       ],

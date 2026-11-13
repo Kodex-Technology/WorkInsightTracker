@@ -7,6 +7,7 @@ import 'package:witrack/core/widgets/witrack_surface.dart';
 import 'package:witrack/data/database/app_database.dart';
 import 'package:witrack/data/providers.dart';
 import 'package:witrack/data/screenshots/screenshot_store.dart';
+import 'package:witrack/data/tracking/productivity.dart';
 import 'package:witrack/domain/tracking/tracking_state.dart';
 import 'package:witrack/features/auth/auth_controller.dart';
 import 'package:witrack/features/tracking/tracking_controller.dart';
@@ -304,18 +305,44 @@ class ScreenshotsScreen extends ConsumerWidget {
                         ),
                       );
                     }
-                    return GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 240,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 1.15,
-                      ),
-                      itemCount: rows.length,
-                      itemBuilder: (context, index) {
-                        return _ScreenshotCard(row: rows[index]);
-                      },
+                    final scores = rows
+                        .map(
+                          (r) =>
+                              ScreenshotProductivity.tryParse(r.metadataJson),
+                        )
+                        .toList();
+                    final avg = ScreenshotProductivity.averagePercent(scores);
+                    final scored = scores.whereType<ScreenshotProductivity>();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (scored.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _ProductivitySummaryCard(
+                              percent: avg,
+                              shotCount: scored.length,
+                              label: filter.taskId != null
+                                  ? 'Task productivity'
+                                  : 'Filter productivity',
+                            ),
+                          ),
+                        Expanded(
+                          child: GridView.builder(
+                            gridDelegate:
+                                const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 260,
+                              mainAxisSpacing: 14,
+                              crossAxisSpacing: 14,
+                              childAspectRatio: 0.92,
+                            ),
+                            itemCount: rows.length,
+                            itemBuilder: (context, index) {
+                              return _ScreenshotCard(row: rows[index]);
+                            },
+                          ),
+                        ),
+                      ],
                     );
                   },
                   loading: () =>
@@ -340,60 +367,99 @@ class _ScreenshotCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final bytes = ref.watch(screenshotBytesProvider(row.id));
+    final prod = ScreenshotProductivity.tryParse(row.metadataJson);
+    final percent = prod?.percent ?? 0;
 
     return WitrackSurface(
       padding: const EdgeInsets.all(10),
       child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () => _openPreview(context, ref),
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => _openDetail(context, ref, prod),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: bytes.when(
-                skipLoadingOnReload: true,
-                loading: () => const Center(
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: bytes.when(
+                  skipLoadingOnReload: true,
+                  loading: () => ColoredBox(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    child: const Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
                   ),
-                ),
-                error: (_, _) => Center(
-                  child: Text(
-                    'Unavailable',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ),
-                data: (data) {
-                  if (data == null) {
-                    return Center(
+                  error: (_, _) => ColoredBox(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    child: Center(
                       child: Text(
                         'Unavailable',
                         style: theme.textTheme.bodySmall,
                       ),
-                    );
-                  }
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.memory(
+                    ),
+                  ),
+                  data: (data) {
+                    if (data == null) {
+                      return ColoredBox(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        child: Center(
+                          child: Text(
+                            'Unavailable',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ),
+                      );
+                    }
+                    return Image.memory(
                       data,
                       fit: BoxFit.cover,
                       width: double.infinity,
+                      height: double.infinity,
                       gaplessPlayback: true,
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              DateFormat('MMM d · HH:mm:ss').format(row.takenAt.toLocal()),
-              style: theme.textTheme.labelLarge,
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    DateFormat('MMM d · HH:mm:ss').format(row.takenAt.toLocal()),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (prod != null)
+                  Text(
+                    '${percent.toStringAsFixed(0)}%',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+              ],
             ),
+            const SizedBox(height: 6),
+            if (prod != null) ...[
+              _ProductivityBar(percent: percent, height: 7),
+              const SizedBox(height: 6),
+            ],
             Text(
-              'Display ${row.displayIndex + 1}${row.isTestCapture ? ' · test' : ''}',
+              'Display ${row.displayIndex + 1}'
+              '${row.isTestCapture ? ' · test' : ''}'
+              '${prod != null ? ' · ${prod.appSwitches} switches' : ''}',
               style: theme.textTheme.bodySmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -401,34 +467,313 @@ class _ScreenshotCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _openPreview(BuildContext context, WidgetRef ref) async {
+  Future<void> _openDetail(
+    BuildContext context,
+    WidgetRef ref,
+    ScreenshotProductivity? prod,
+  ) async {
     final bytes = await ref.read(screenshotBytesProvider(row.id).future);
-    if (!context.mounted || bytes == null) return;
+    if (!context.mounted) return;
     await showDialog<void>(
       context: context,
       builder: (context) {
+        final theme = Theme.of(context);
+        final timeFmt = DateFormat('HH:mm:ss');
         return Dialog(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 700),
-            child: Column(
-              children: [
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
+            constraints: const BoxConstraints(maxWidth: 1040, maxHeight: 740),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Screenshot detail',
+                          style: theme.textTheme.titleMedium,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
                   ),
-                ),
-                Expanded(
-                  child: InteractiveViewer(
-                    child: Image.memory(bytes, gaplessPlayback: true),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: bytes == null
+                              ? Center(
+                                  child: Text(
+                                    'Image unavailable',
+                                    style: theme.textTheme.bodyMedium,
+                                  ),
+                                )
+                              : ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: InteractiveViewer(
+                                    child: Image.memory(
+                                      bytes,
+                                      gaplessPlayback: true,
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: WitrackSurface(
+                            padding: const EdgeInsets.all(12),
+                            child: prod == null
+                                ? Text(
+                                    'No productivity data on this capture yet. '
+                                    'New screenshots include interval scores and events.',
+                                    style: theme.textTheme.bodyMedium,
+                                  )
+                                : ListView(
+                                    children: [
+                                      Text(
+                                        '${prod.percent.toStringAsFixed(0)}% productive',
+                                        style: theme.textTheme.headlineSmall
+                                            ?.copyWith(
+                                          color: theme.colorScheme.primary,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _ProductivityBar(
+                                        percent: prod.percent,
+                                        height: 10,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Since previous shot (or session start). '
+                                        'Based on 10s activity samples — not key content.',
+                                        style: theme.textTheme.bodySmall,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      _StatLine(
+                                        label: 'Input activity pulses',
+                                        value: '${prod.inputPulses}',
+                                      ),
+                                      _StatLine(
+                                        label: 'Activity samples',
+                                        value:
+                                            '${prod.activeSamples}/${prod.totalSamples} active',
+                                      ),
+                                      _StatLine(
+                                        label: 'App / focus switches',
+                                        value: '${prod.appSwitches}',
+                                      ),
+                                      _StatLine(
+                                        label: 'Idle enters',
+                                        value: '${prod.idleEnters}',
+                                      ),
+                                      if (prod.apps.isNotEmpty) ...[
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          'Apps in interval',
+                                          style: theme.textTheme.titleSmall,
+                                        ),
+                                        const SizedBox(height: 6),
+                                        for (final app in prod.apps.take(8))
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              bottom: 4,
+                                            ),
+                                            child: Text(
+                                              '${app.name} · ${app.count}×',
+                                              style: theme.textTheme.bodySmall,
+                                            ),
+                                          ),
+                                      ],
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'Events',
+                                        style: theme.textTheme.titleSmall,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      if (prod.events.isEmpty)
+                                        Text(
+                                          'No discrete events in this window.',
+                                          style: theme.textTheme.bodySmall,
+                                        )
+                                      else
+                                        for (final event in prod.events.reversed)
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              bottom: 8,
+                                            ),
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                SizedBox(
+                                                  width: 54,
+                                                  child: Text(
+                                                    timeFmt.format(
+                                                      event.at.toLocal(),
+                                                    ),
+                                                    style: theme
+                                                        .textTheme.labelSmall,
+                                                  ),
+                                                ),
+                                                Expanded(
+                                                  child: Text(
+                                                    event.label == null ||
+                                                            event.label!
+                                                                .isEmpty
+                                                        ? event.title
+                                                        : '${event.title}: ${event.label}',
+                                                    style: theme
+                                                        .textTheme.bodySmall,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class _StatLine extends StatelessWidget {
+  const _StatLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
+          Text(
+            value,
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductivitySummaryCard extends StatelessWidget {
+  const _ProductivitySummaryCard({
+    required this.percent,
+    required this.shotCount,
+    required this.label,
+  });
+
+  final double percent;
+  final int shotCount;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return WitrackSurface(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                '${percent.toStringAsFixed(0)}%',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Average across $shotCount screenshot${shotCount == 1 ? '' : 's'}',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 10),
+          _ProductivityBar(percent: percent, height: 10),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductivityBar extends StatelessWidget {
+  const _ProductivityBar({
+    required this.percent,
+    this.height = 8,
+  });
+
+  final double percent;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final value = (percent.clamp(0, 100) / 100).toDouble();
+    final fill = theme.colorScheme.primary;
+    final track = theme.colorScheme.surfaceContainerHighest;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: SizedBox(
+        height: height,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ColoredBox(color: track.withValues(alpha: 0.9)),
+            FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: value,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      fill,
+                      Color.lerp(fill, theme.colorScheme.secondary, 0.35)!,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
