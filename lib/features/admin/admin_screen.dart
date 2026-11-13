@@ -17,7 +17,7 @@ final registeredUsersProvider = StreamProvider<List<User>>((ref) {
 });
 
 /// Admin console — users, screenshot policy, feature flags.
-/// No personal tracking dashboard (timer / projects / reports).
+/// No personal tracking dashboard (timer / projects).
 class AdminScreen extends ConsumerStatefulWidget {
   const AdminScreen({super.key});
 
@@ -95,7 +95,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Manage registered users, screenshot capture timing, and feature flags. '
-                    'Personal tracking (timer / projects / reports) is for user accounts — not shown here.',
+                    'Personal tracking (timer / projects) is for user accounts — not shown here.',
                     style: theme.textTheme.bodyMedium,
                   ),
                 ],

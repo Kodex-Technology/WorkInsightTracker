@@ -8,6 +8,7 @@ import 'package:witrack/data/providers.dart';
 import 'package:witrack/domain/tracking/tracking_state.dart';
 import 'package:witrack/features/auth/auth_controller.dart';
 import 'package:witrack/features/dashboard/activity_sparkline.dart';
+import 'package:witrack/features/dashboard/circular_progress_ring.dart';
 import 'package:witrack/features/dashboard/live_session_timer.dart';
 import 'package:witrack/features/dashboard/project_time_tree.dart';
 import 'package:witrack/features/tracking/tracking_controller.dart';
@@ -89,7 +90,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               WitrackSurface(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -106,9 +107,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         _StatusPill(status: status),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     const LiveSessionTimer(),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     TrackingControls(state: trackingSnapshot),
                     if (errorMessage != null) ...[
                       const SizedBox(height: 10),
@@ -125,62 +126,54 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(height: 12),
               const ProjectTimeTreePanel(),
               const SizedBox(height: 12),
+              const _DashboardInsights(),
+              const SizedBox(height: 12),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     flex: 3,
                     child: WitrackSurface(
+                      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Activity overview',
-                            style: theme.textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
+                          Row(
                             children: [
-                              _MetricChip(
-                                label: 'Activity',
-                                value: activityPercent == null
+                              Text(
+                                'Activity',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                currentApp == null || currentApp.isEmpty
                                     ? '—'
-                                    : '${activityPercent.round()}%',
-                                tone: _MetricTone.teal,
+                                    : currentApp,
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
                               ),
-                              _MetricChip(
-                                label: 'App',
-                                value: currentApp ?? '—',
-                                tone: _MetricTone.sky,
-                              ),
-                              _MetricChip(
-                                label: 'Last shot',
-                                value: lastShot == null
-                                    ? '—'
-                                    : DateFormat.Hm().format(lastShot),
-                                tone: _MetricTone.slate,
-                              ),
+                              if (lastShot != null) ...[
+                                Text(
+                                  ' · ${DateFormat.Hm().format(lastShot)}',
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
-                          const SizedBox(height: 14),
-                          const ActivitySparkline(),
                           const SizedBox(height: 12),
+                          const ActivitySparkline(),
+                          const SizedBox(height: 8),
                           Wrap(
-                            spacing: 8,
+                            spacing: 4,
                             children: [
-                              TextButton(
-                                onPressed: () => context.go('/app/timeline'),
-                                child: const Text('Timeline'),
-                              ),
                               TextButton(
                                 onPressed: () => context.go('/app/screenshots'),
                                 child: const Text('Screenshots'),
-                              ),
-                              TextButton(
-                                onPressed: () => context.go('/app/reports'),
-                                child: const Text('Reports'),
                               ),
                               TextButton(
                                 onPressed: status.isRunning
@@ -202,14 +195,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   Expanded(
                     flex: 2,
                     child: WitrackSurface(
+                      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Recent sessions',
-                            style: theme.textTheme.titleMedium,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 8),
                           sessions.when(
                             skipLoadingOnReload: true,
                             skipLoadingOnRefresh: true,
@@ -227,7 +223,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               }
                               return Column(
                                 children: [
-                                  for (final row in rows.take(6))
+                                  for (final row in rows.take(5))
                                     ListTile(
                                       dense: true,
                                       contentPadding: EdgeInsets.zero,
@@ -269,137 +265,156 @@ final recentSessionsProvider = StreamProvider<List<TrackingSession>>((ref) {
   return ref.watch(sessionRepositoryProvider).watchRecentSessions();
 });
 
+class _DashboardInsights extends ConsumerWidget {
+  const _DashboardInsights();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final accent = theme.colorScheme.primary;
+    final secondary = theme.colorScheme.secondary;
+    final activityPercent = ref.watch(
+      trackingControllerProvider.select((s) => s.activityPercent),
+    );
+    final active = ref.watch(
+      trackingControllerProvider.select((s) => s.active),
+    );
+    final idle = ref.watch(
+      trackingControllerProvider.select((s) => s.idle),
+    );
+    final paused = ref.watch(
+      trackingControllerProvider.select((s) => s.paused),
+    );
+    final open = ref.watch(
+      trackingControllerProvider.select(
+        (s) =>
+            s.status == TrackingStatus.tracking ||
+            s.status == TrackingStatus.idle ||
+            s.status == TrackingStatus.paused,
+      ),
+    );
+    final day = ref.watch(dayTimeTreeBaseProvider.select((t) => t.day));
+    final activeMs = day.active.inMilliseconds +
+        (open ? active.inMilliseconds : 0);
+    final idleMs = day.idle.inMilliseconds + (open ? idle.inMilliseconds : 0);
+    final pausedMs =
+        day.paused.inMilliseconds + (open ? paused.inMilliseconds : 0);
+    final totalMs = activeMs + idleMs + pausedMs;
+    final activeFrac = totalMs == 0 ? 0.0 : activeMs / totalMs;
+    final idleFrac = totalMs == 0 ? 0.0 : idleMs / totalMs;
+    final pausedFrac = totalMs == 0 ? 0.0 : pausedMs / totalMs;
+    final activityFrac =
+        ((activityPercent ?? 0).clamp(0.0, 100.0)) / 100.0;
+
+    return WitrackSurface(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Progress',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              if (open)
+                Text(
+                  'LIVE',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: accent,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Today mix · circular readouts update with the open session',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 18,
+            runSpacing: 16,
+            alignment: WrapAlignment.spaceEvenly,
+            children: [
+              CircularProgressRing(
+                value: activityFrac,
+                label: 'Focus',
+                caption: 'Live activity',
+                color: accent,
+                size: 102,
+              ),
+              CircularProgressRing(
+                value: activeFrac,
+                label: 'Active',
+                caption: _compactMs(activeMs),
+                color: accent,
+                size: 96,
+              ),
+              CircularProgressRing(
+                value: idleFrac,
+                label: 'Idle',
+                caption: _compactMs(idleMs),
+                color: secondary,
+                size: 96,
+              ),
+              CircularProgressRing(
+                value: pausedFrac,
+                label: 'Paused',
+                caption: _compactMs(pausedMs),
+                color: const Color(0xFF64748B),
+                size: 96,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _compactMs(int ms) {
+    final d = Duration(milliseconds: ms);
+    if (d.inHours > 0) return '${d.inHours}h ${d.inMinutes % 60}m';
+    return '${d.inMinutes}m ${d.inSeconds % 60}s';
+  }
+}
+
 class _StatusPill extends StatelessWidget {
   const _StatusPill({required this.status});
   final TrackingStatus status;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final color = switch (status) {
-      TrackingStatus.tracking => const Color(0xFF16A34A),
+      TrackingStatus.tracking => theme.colorScheme.primary,
       TrackingStatus.idle => const Color(0xFFD97706),
-      TrackingStatus.paused => const Color(0xFF0284C7),
-      TrackingStatus.error => const Color(0xFFE11D48),
-      _ => Theme.of(context).dividerColor,
+      TrackingStatus.paused => const Color(0xFF38BDF8),
+      TrackingStatus.error => theme.colorScheme.error,
+      _ => theme.colorScheme.onSurfaceVariant,
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(
         status.label,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(color: color),
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
+        ),
       ),
     );
-  }
-}
-
-enum _MetricTone { teal, sky, slate }
-
-class _MetricChip extends StatelessWidget {
-  const _MetricChip({
-    required this.label,
-    required this.value,
-    this.tone = _MetricTone.teal,
-  });
-
-  final String label;
-  final String value;
-  final _MetricTone tone;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final (top, bottom, accent) = _gradient(isDark);
-
-    return Container(
-      width: 148,
-      padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [top, bottom],
-        ),
-        border: Border.all(
-          color: accent.withValues(alpha: isDark ? 0.28 : 0.22),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: accent.withValues(alpha: isDark ? 0.12 : 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.titleSmall?.copyWith(
-              color: theme.colorScheme.onSurface,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  (Color, Color, Color) _gradient(bool isDark) {
-    switch (tone) {
-      case _MetricTone.teal:
-        return isDark
-            ? (
-                const Color(0xFF14302C),
-                const Color(0xFF171E27),
-                const Color(0xFF2DD4BF),
-              )
-            : (
-                const Color(0xFFE7F7F4),
-                const Color(0xFFFFFFFF),
-                const Color(0xFF0F766E),
-              );
-      case _MetricTone.sky:
-        return isDark
-            ? (
-                const Color(0xFF152636),
-                const Color(0xFF171E27),
-                const Color(0xFF38BDF8),
-              )
-            : (
-                const Color(0xFFE8F3FB),
-                const Color(0xFFFFFFFF),
-                const Color(0xFF0369A1),
-              );
-      case _MetricTone.slate:
-        return isDark
-            ? (
-                const Color(0xFF1B2330),
-                const Color(0xFF171E27),
-                const Color(0xFF94A3B8),
-              )
-            : (
-                const Color(0xFFF0F3F7),
-                const Color(0xFFFFFFFF),
-                const Color(0xFF64748B),
-              );
-    }
   }
 }

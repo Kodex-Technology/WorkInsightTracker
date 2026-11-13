@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:witrack/core/theme/witrack_colors.dart';
 import 'package:witrack/domain/tracking/tracking_state.dart';
 import 'package:witrack/features/tracking/tracking_controller.dart';
 
@@ -23,24 +22,30 @@ class TrackingControls extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Wrap(
-          spacing: 8,
+          spacing: 10,
           runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             if (state.status.canStart)
               FilledButton.icon(
                 style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 42),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                   backgroundColor: canStart
-                      ? WitrackColors.success
+                      ? theme.colorScheme.primary
                       : theme.disabledColor,
                   foregroundColor: Colors.white,
                 ),
                 onPressed: canStart ? controller.start : null,
-                icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                label: const Text('Start Tracking'),
+                icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                label: const Text('Start'),
               ),
             if (state.status.canPause)
               FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 42),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
                 onPressed: controller.pause,
                 icon: const Icon(Icons.pause_rounded, size: 18),
                 label: const Text('Pause'),
@@ -48,7 +53,9 @@ class TrackingControls extends ConsumerWidget {
             if (state.status.canResume)
               FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: WitrackColors.success,
+                  minimumSize: const Size(0, 42),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  backgroundColor: theme.colorScheme.primary,
                   foregroundColor: Colors.white,
                 ),
                 onPressed: controller.resume,
@@ -58,9 +65,11 @@ class TrackingControls extends ConsumerWidget {
             if (state.status.canStop)
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 42),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   foregroundColor: theme.colorScheme.error,
                   side: BorderSide(
-                    color: theme.colorScheme.error.withValues(alpha: 0.45),
+                    color: theme.colorScheme.error.withValues(alpha: 0.5),
                   ),
                 ),
                 onPressed: () => _confirmStop(context, controller),
@@ -72,7 +81,7 @@ class TrackingControls extends ConsumerWidget {
         if (needsTask) ...[
           const SizedBox(height: 8),
           Text(
-            'Create a project and a task, then click the task. Start enables after that.',
+            'Add a project and task, then click the task (or Start) to begin.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -102,7 +111,7 @@ class TrackingControls extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: const Text('Stop tracking?'),
         content: const Text(
-          'This ends the current task segment and saves durations to Today (all work).',
+          'This ends the current task segment and saves durations to Today.',
         ),
         actions: [
           TextButton(

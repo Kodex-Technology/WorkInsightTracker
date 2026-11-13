@@ -108,6 +108,7 @@ class TrackingController extends Notifier<TrackingUiState> {
   Timer? _uiTicker;
   Timer? _screenshotTimer;
   String? _sessionId;
+  DateTime? _productivityWindowStart;
   int _activeBuckets = 0;
   int _totalBuckets = 0;
   TrackingSettings _settings = const TrackingSettings();
@@ -341,6 +342,7 @@ class TrackingController extends Notifier<TrackingUiState> {
     _sessionId = sessionId;
     _activeBuckets = 0;
     _totalBuckets = 0;
+    _productivityWindowStart = now.toUtc();
     _clock.start(now);
     final nextStatus = resumeStatus == TrackingStatus.paused ||
             resumeStatus == TrackingStatus.idle
@@ -411,6 +413,7 @@ class TrackingController extends Notifier<TrackingUiState> {
       _sessionId = sessionId;
       _activeBuckets = 0;
       _totalBuckets = 0;
+      _productivityWindowStart = DateTime.now().toUtc();
       _clock.start(DateTime.now());
       _startTicker();
       await _engine.start();
@@ -490,6 +493,7 @@ class TrackingController extends Notifier<TrackingUiState> {
       }
     }
     _sessionId = null;
+    _productivityWindowStart = null;
     // Stopped UI shows a clean 00:00:00 segment; day totals hold finished time.
     state = TrackingUiState(
       status: TrackingStatus.stopped,
@@ -543,6 +547,16 @@ class TrackingController extends Notifier<TrackingUiState> {
     try {
       final images = await _engine.captureDisplays();
       final store = ref.read(screenshotStoreProvider);
+      final windowEnd = DateTime.now().toUtc();
+      final windowStart = _productivityWindowStart ?? windowEnd;
+      final productivity = await ref
+          .read(sessionRepositoryProvider)
+          .productivityForWindow(
+            sessionId: sessionId,
+            windowStart: windowStart,
+            windowEnd: windowEnd,
+          );
+      final productivityMeta = productivity.toJson();
       DateTime? last;
       for (final image in images) {
         final row = await store.persistCapture(
@@ -558,16 +572,23 @@ class TrackingController extends Notifier<TrackingUiState> {
             'source': isTest ? 'test_capture' : 'interval',
             if (state.projectName != null) 'projectName': state.projectName,
             if (state.taskName != null) 'taskName': state.taskName,
+            ...productivityMeta,
           },
         );
         last = row.takenAt;
       }
+      // Next interval starts after this capture (shared across multi-display).
+      _productivityWindowStart = windowEnd;
       if (last != null) {
-        state = state.copyWith(lastScreenshotAt: last.toLocal());
+        state = state.copyWith(
+          lastScreenshotAt: last.toLocal(),
+          activityPercent: productivity.percent,
+        );
         await ref.read(sessionRepositoryProvider).addEvent(
               sessionId: sessionId,
               type: isTest ? 'screenshot_test' : 'screenshot',
-              payload: '${images.length} display(s)',
+              payload:
+                  '${images.length} display(s) · ${productivity.percent.toStringAsFixed(0)}% productive',
             );
       }
     } catch (e) {

@@ -26,4 +26,4 @@ When re-enabled with a real backend:
 
 - Use a provider adapter + `ApiResult` (`lib/core/network/api_result.dart`) — no hardcoded roles/emails in UI.
 - Unknown response fields stay in `raw` maps; UI must tolerate missing optional keys.
-- See [future-backend-integration.md](future-backend-integration.md).
+- See [backend-api.md](backend-api.md) for endpoints + JSON.

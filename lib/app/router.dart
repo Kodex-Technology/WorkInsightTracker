@@ -13,7 +13,6 @@ import 'package:witrack/features/calendar/calendar_screen.dart';
 import 'package:witrack/features/dashboard/dashboard_screen.dart';
 import 'package:witrack/features/onboarding/permissions_screen.dart';
 import 'package:witrack/features/projects/projects_screen.dart';
-import 'package:witrack/features/reports/reports_screen.dart';
 import 'package:witrack/features/screenshots/screenshots_screen.dart';
 import 'package:witrack/features/settings/settings_screen.dart';
 import 'package:witrack/features/shell/app_shell.dart';
@@ -65,7 +64,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         const tracking = [
           '/app/dashboard',
           '/app/timeline',
-          '/app/reports',
           '/app/calendar',
           '/app/projects',
         ];
@@ -79,9 +77,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       if (loc.startsWith('/app/screenshots') &&
           !flags.isOn(FeatureId.screenshots)) {
-        return auth.user?.isDevAdmin == true ? '/app/admin' : '/app/dashboard';
-      }
-      if (loc.startsWith('/app/reports') && !flags.isOn(FeatureId.reports)) {
         return auth.user?.isDevAdmin == true ? '/app/admin' : '/app/dashboard';
       }
       if (loc.startsWith('/app/calendar') && !flags.isOn(FeatureId.calendar)) {
@@ -134,13 +129,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) => FadeSlidePage(
               key: state.pageKey,
               child: const ScreenshotsScreen(),
-            ),
-          ),
-          GoRoute(
-            path: '/app/reports',
-            pageBuilder: (context, state) => FadeSlidePage(
-              key: state.pageKey,
-              child: const ReportsScreen(),
             ),
           ),
           GoRoute(

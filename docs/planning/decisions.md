@@ -53,3 +53,15 @@
 **Decision (superseded for now):** Firebase Google Auth + web admin was prototyped, then **deferred**. Desktop ships with local development auth only until Google/Firebase is re-enabled deliberately.  
 **Why:** Disk/SDK and setup friction blocked a reliable Windows Google auth path; product priority is working local tracking.  
 **Date:** 2026-11-12
+
+## ADR-010 — Remove Reports screen
+
+**Decision:** Delete the Reports feature (route, nav, `FeatureId.reports`, `ENABLE_REPORTS`). Insights live on the dashboard Progress rings + activity sparkline.  
+**Why:** Duplicate surface; dashboard already shows live Active/Idle/Paused mix.  
+**Date:** 2026-11-13
+
+## ADR-011 — Single backend-api.md + readiness doc
+
+**Decision:** Replace split backend/gap/roadmap limitation docs with `docs/architecture/backend-api.md` (APIs/JSON) and `docs/planning/weaknesses-and-readiness.md`. macOS is architecture-ready, not claimed 100% until Mac QA.  
+**Why:** Fewer duplicate MDs; clearer deploy contract.  
+**Date:** 2026-11-13

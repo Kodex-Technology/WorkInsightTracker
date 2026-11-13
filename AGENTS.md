@@ -36,7 +36,7 @@ Docs index: [docs/README.md](docs/README.md)
 8. Do not claim tests/builds passed without running them.
 9. Architecture changes require an entry in `docs/planning/decisions.md`.
 10. Update milestone status in `docs/planning/milestones.md` when a milestone completes.
-11. External backend / attendance / portal integrations must use provider adapters (see `docs/architecture/future-backend-integration.md`) and must never call remote services from the native tracking engine.
+11. External backend / attendance / portal integrations must use provider adapters (see `docs/architecture/backend-api.md`) and must never call remote services from the native tracking engine.
 12. Future Google/auth/API work must stay dynamic: no hardcoded roles/emails in UI; parse backend payloads via `ApiResult` / soft maps so unknown fields do not crash the app.
 
 ## Code layout
