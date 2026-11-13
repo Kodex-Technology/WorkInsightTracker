@@ -1,0 +1,6 @@
+{
+  "APP_NAME": "Witrack",
+  "APP_ENV": "production",
+  "ENABLE_GOOGLE_AUTH": "false",
+  "ENABLE_LOCAL_DEV_AUTH": "false"
+}
