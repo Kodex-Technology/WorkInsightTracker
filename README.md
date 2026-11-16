@@ -8,8 +8,10 @@ Phase 1 delivers a fully functional **Windows** offline-first tracker with a pla
 
 ## Requirements
 
-- Flutter stable (3.47+ recommended)
-- Windows 10/11 with Visual Studio Build Tools (Desktop C++)
+- Flutter stable with Dart 3.13.7 or later
+- Windows 10/11 with Visual Studio 2022 Build Tools (Desktop development with
+  C++, ATL for x86/x64, and the Windows SDK)
+- Windows Developer Mode enabled (required for Flutter plugin symlinks)
 - Optional later: macOS + Xcode for Swift engine work
 
 ## Quick start

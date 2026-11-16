@@ -70,7 +70,10 @@ class WitrackSurface extends StatelessWidget {
       ),
       child: DefaultTextStyle.merge(
         style: theme.textTheme.bodyMedium,
-        child: Padding(padding: padding, child: child),
+        child: Padding(
+          padding: padding,
+          child: Material(color: Colors.transparent, child: child),
+        ),
       ),
     );
   }
