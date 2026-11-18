@@ -31,6 +31,11 @@ abstract final class AppEnv {
     defaultValue: 'WorkInsight Tracker',
   );
 
+  static const String apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://127.0.0.1:8000/api/',
+  );
+
   static String get _resolvedRaw {
     if (_rawEnv.isNotEmpty) return _rawEnv;
     return _legacyEnv;

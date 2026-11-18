@@ -123,6 +123,54 @@ abstract final class WitrackTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
+        ).copyWith(
+          mouseCursor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return SystemMouseCursors.forbidden;
+            }
+            return SystemMouseCursors.click;
+          }),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return accent.withValues(alpha: 0.35);
+            }
+            if (states.contains(WidgetState.hovered)) {
+              return Color.alphaBlend(Colors.white.withValues(alpha: 0.12), accent);
+            }
+            if (states.contains(WidgetState.pressed)) {
+              return Color.alphaBlend(Colors.black.withValues(alpha: 0.12), accent);
+            }
+            return accent;
+          }),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: surface,
+          foregroundColor: textPrimary,
+          minimumSize: const Size(0, 36),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          textStyle: const TextStyle(
+            fontFamily: WitrackTypography.fontFamily,
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ).copyWith(
+          mouseCursor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return SystemMouseCursors.forbidden;
+            }
+            return SystemMouseCursors.click;
+          }),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return Color.alphaBlend(accent.withValues(alpha: 0.1), surface);
+            }
+            return surface;
+          }),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -139,6 +187,28 @@ abstract final class WitrackTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
+        ).copyWith(
+          mouseCursor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return SystemMouseCursors.forbidden;
+            }
+            return SystemMouseCursors.click;
+          }),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return accent.withValues(alpha: 0.08);
+            }
+            if (states.contains(WidgetState.pressed)) {
+              return accent.withValues(alpha: 0.15);
+            }
+            return Colors.transparent;
+          }),
+          side: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return BorderSide(color: accent, width: 1.5);
+            }
+            return BorderSide(color: border);
+          }),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -149,19 +219,83 @@ abstract final class WitrackTheme {
             fontWeight: FontWeight.w600,
             fontSize: 13,
           ),
+        ).copyWith(
+          mouseCursor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return SystemMouseCursors.forbidden;
+            }
+            return SystemMouseCursors.click;
+          }),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return accent.withValues(alpha: 0.08);
+            }
+            if (states.contains(WidgetState.pressed)) {
+              return accent.withValues(alpha: 0.15);
+            }
+            return Colors.transparent;
+          }),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(
+          mouseCursor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return SystemMouseCursors.forbidden;
+            }
+            return SystemMouseCursors.click;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return accent;
+            }
+            return textSecondary;
+          }),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return accent.withValues(alpha: 0.1);
+            }
+            if (states.contains(WidgetState.pressed)) {
+              return accent.withValues(alpha: 0.2);
+            }
+            return Colors.transparent;
+          }),
         ),
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: ButtonStyle(
+          mouseCursor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return SystemMouseCursors.forbidden;
+            }
+            return SystemMouseCursors.click;
+          }),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) return Colors.white;
+            if (states.contains(WidgetState.hovered)) return accent;
             return textPrimary;
           }),
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) return accent;
+            if (states.contains(WidgetState.hovered)) return accent.withValues(alpha: 0.1);
             return surface;
           }),
         ),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        mouseCursor: WidgetStateProperty.all(SystemMouseCursors.click),
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return accent;
+          return surface;
+        }),
+        checkColor: WidgetStateProperty.all(Colors.white),
+      ),
+      radioTheme: RadioThemeData(
+        mouseCursor: WidgetStateProperty.all(SystemMouseCursors.click),
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return accent;
+          return textSecondary;
+        }),
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {

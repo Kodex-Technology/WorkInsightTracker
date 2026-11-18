@@ -1,4 +1,8 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:witrack/core/config/app_env.dart';
 import 'package:witrack/data/auth/auth_repository.dart';
 import 'package:witrack/data/providers.dart';
 
@@ -67,6 +71,52 @@ class AuthController extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final user = await _repo.signInLocalAdmin();
+      state = AuthState(user: user, isLoading: false);
+    } catch (e) {
+      state = AuthState(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<void> signInWithPortal() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final url = '${AppEnv.apiBaseUrl}tracker/generate-token';
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final Map<String, Object?> jsonMap =
+            jsonDecode(response.body) as Map<String, Object?>;
+        final status = jsonMap['status'] == true;
+        final redirectUrl = jsonMap['redirect_url']?.toString();
+
+        if (status && redirectUrl != null && redirectUrl.isNotEmpty) {
+          final uri = Uri.parse(redirectUrl);
+          final launched =
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+          if (!launched) {
+            throw Exception('Could not open browser to redirect URL: $redirectUrl');
+          }
+          state = state.copyWith(isLoading: false);
+        } else {
+          final message =
+              jsonMap['message']?.toString() ?? 'Failed to generate tracker token';
+          throw Exception(message);
+        }
+      } else {
+        throw Exception('Server error (HTTP ${response.statusCode})');
+      }
+    } catch (e) {
+      state = AuthState(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<void> handlePortalToken(String token) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final user = await _repo.signInWithPortalToken(token);
       state = AuthState(user: user, isLoading: false);
     } catch (e) {
       state = AuthState(isLoading: false, error: e.toString());

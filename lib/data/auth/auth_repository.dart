@@ -64,6 +64,38 @@ class AuthRepository {
     );
   }
 
+  Future<AuthUser> signInWithPortalToken(String token) async {
+    final cleanToken = token.trim();
+    final email = 'portal_user_${cleanToken.substring(0, cleanToken.length > 8 ? 8 : cleanToken.length)}@witrack.local';
+    const displayName = 'Portal User';
+
+    final existing = await (_db.select(_db.users)
+          ..where((t) => t.email.equals(email)))
+        .getSingleOrNull();
+
+    final user = existing ??
+        await _db.into(_db.users).insertReturning(
+              UsersCompanion.insert(
+                id: const Uuid().v4(),
+                email: email,
+                displayName: displayName,
+                createdAt: DateTime.now().toUtc(),
+                authProvider: const Value('portal'),
+              ),
+            );
+
+    await _prefs.setString(_sessionKey, user.id);
+    await _devices.upsertForUser(localUserId: user.id);
+    return AuthUser(
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      firebaseUid: user.firebaseUid,
+      role: AuthRole.user,
+      isLocalDev: false,
+    );
+  }
+
   Future<AuthUser> _signInLocal({
     required String email,
     required String displayName,

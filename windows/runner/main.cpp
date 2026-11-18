@@ -41,6 +41,32 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
+  // Single-instance check via Mutex
+  HANDLE mutex = CreateMutex(nullptr, TRUE, L"Local\\WorkInsightTracker_SingleInstance_Mutex");
+  if (GetLastError() == ERROR_ALREADY_EXISTS) {
+    HWND hwnd = FindWindow(L"FLUTTER_RUNNER_WIN32_WINDOW", L"WorkInsight Tracker");
+    if (hwnd) {
+      std::wstring cmd_line(command_line);
+      if (!cmd_line.empty()) {
+        COPYDATASTRUCT cds;
+        cds.dwData = 1001;
+        cds.cbData = static_cast<DWORD>((cmd_line.length() + 1) * sizeof(wchar_t));
+        cds.lpData = const_cast<wchar_t*>(cmd_line.c_str());
+        SendMessage(hwnd, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&cds));
+      }
+      SetForegroundWindow(hwnd);
+      if (IsIconic(hwnd)) {
+        ShowWindow(hwnd, SW_RESTORE);
+      }
+    }
+    if (mutex) {
+      ReleaseMutex(mutex);
+      CloseHandle(mutex);
+    }
+    ::CoUninitialize();
+    return EXIT_SUCCESS;
+  }
+
   flutter::DartProject project(L"data");
   std::vector<std::string> command_line_arguments = GetCommandLineArguments();
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));

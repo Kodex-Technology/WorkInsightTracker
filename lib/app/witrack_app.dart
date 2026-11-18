@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:witrack/app/router.dart';
 import 'package:witrack/core/constants/app_constants.dart';
+import 'package:witrack/core/platform/deep_link_service.dart';
 import 'package:witrack/core/theme/theme_mode_provider.dart';
 import 'package:witrack/core/theme/witrack_theme.dart';
 import 'package:witrack/features/tracking/desktop_notice_host.dart';
@@ -12,6 +13,7 @@ class WitrackApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(deepLinkServiceProvider);
     final themeMode = ref.watch(themeModeProvider);
     final router = ref.watch(routerProvider);
 
