@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -64,10 +65,66 @@ class AuthRepository {
     );
   }
 
-  Future<AuthUser> signInWithPortalToken(String token) async {
+  Future<AuthUser> signInWithPortalToken(
+    String token, {
+    String? roleType,
+    Map<String, dynamic>? userData,
+  }) async {
     final cleanToken = token.trim();
-    final email = 'portal_user_${cleanToken.substring(0, cleanToken.length > 8 ? 8 : cleanToken.length)}@witrack.local';
-    const displayName = 'Portal User';
+    final email = userData?['email']?.toString() ??
+        'portal_user_${cleanToken.substring(0, cleanToken.length > 8 ? 8 : cleanToken.length)}@witrack.local';
+
+    final firstName = userData?['first_name']?.toString();
+    final lastName = userData?['last_name']?.toString();
+    final profileImage = userData?['profile_image']?.toString();
+    final department = userData?['department']?.toString();
+
+    String? designationName;
+    final desigRaw = userData?['designation'];
+    if (desigRaw is Map) {
+      designationName = desigRaw['designation_name']?.toString() ??
+          desigRaw['name']?.toString();
+    } else if (desigRaw is String) {
+      designationName = desigRaw;
+    }
+
+    String? orgName;
+    final orgRaw = userData?['organization'];
+    if (orgRaw is Map) {
+      orgName = orgRaw['name']?.toString();
+    } else if (orgRaw is String) {
+      orgName = orgRaw;
+    }
+
+    final displayName = (firstName != null &&
+            firstName.isNotEmpty &&
+            lastName != null &&
+            lastName.isNotEmpty)
+        ? '$firstName $lastName'
+        : (userData?['name']?.toString() ?? 'Portal User');
+
+    final orgAdmin = userData?['org_admin'];
+
+    final userRoleRaw = userData?['user_role'];
+    String? userRoleType;
+    String? userRoleName;
+    if (userRoleRaw is Map) {
+      userRoleType = userRoleRaw['role_type']?.toString();
+      userRoleName = userRoleRaw['role_name']?.toString();
+    }
+
+    final lowerRole = (roleType ?? userRoleType ?? userRoleName ?? '')
+        .trim()
+        .toLowerCase();
+    final AuthRole role;
+    if (
+        lowerRole == 'admin' ) {
+      role = AuthRole.admin;
+    } else {
+      role = AuthRole.user;
+    }
+    final roleStr = role == AuthRole.admin ? 'admin' : 'user';
+    final userDataJsonStr = userData != null ? jsonEncode(userData) : null;
 
     final existing = await (_db.select(_db.users)
           ..where((t) => t.email.equals(email)))
@@ -81,17 +138,48 @@ class AuthRepository {
                 displayName: displayName,
                 createdAt: DateTime.now().toUtc(),
                 authProvider: const Value('portal'),
+                role: Value(roleStr),
+                firstName: Value(firstName),
+                lastName: Value(lastName),
+                profileImage: Value(profileImage),
+                department: Value(department),
+                designation: Value(designationName),
+                organization: Value(orgName),
+                userDataJson: Value(userDataJsonStr),
               ),
             );
 
+    await (_db.update(_db.users)..where((t) => t.id.equals(user.id)))
+        .write(UsersCompanion(
+      role: Value(roleStr),
+      displayName: Value(displayName),
+      firstName: Value(firstName),
+      lastName: Value(lastName),
+      profileImage: Value(profileImage),
+      department: Value(department),
+      designation: Value(designationName),
+      organization: Value(orgName),
+      userDataJson: Value(userDataJsonStr),
+    ));
+
     await _prefs.setString(_sessionKey, user.id);
     await _devices.upsertForUser(localUserId: user.id);
+    await _db.into(_db.appSettings).insertOnConflictUpdate(
+      AppSettingsCompanion.insert(key: 'onboardingCompleted', value: 'true'),
+    );
+
     return AuthUser(
       id: user.id,
-      email: user.email,
-      displayName: user.displayName,
-      firebaseUid: user.firebaseUid,
-      role: AuthRole.user,
+      email: email,
+      displayName: displayName,
+      firstName: firstName,
+      lastName: lastName,
+      profileImage: profileImage,
+      department: department,
+      designation: designationName,
+      organization: orgName,
+      userDataJson: userDataJsonStr,
+      role: role,
       isLocalDev: false,
     );
   }
@@ -149,12 +237,21 @@ class AuthRepository {
   AuthUser _toLocalUser(User row) {
     final isAdminLocal =
         AppEnv.allowLocalAdminTesting && row.email == _adminEmail;
+    final rowRole = row.role == 'admin' ? AuthRole.admin : AuthRole.user;
+    final role = isAdminLocal ? AuthRole.admin : rowRole;
     return AuthUser(
       id: row.id,
       email: row.email,
       displayName: row.displayName,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      profileImage: row.profileImage,
+      department: row.department,
+      designation: row.designation,
+      organization: row.organization,
+      userDataJson: row.userDataJson,
       firebaseUid: row.firebaseUid,
-      role: isAdminLocal ? AuthRole.admin : AuthRole.user,
+      role: role,
       isLocalDev: row.authProvider == 'local' ||
           row.email == _devEmail ||
           row.email == _adminEmail,

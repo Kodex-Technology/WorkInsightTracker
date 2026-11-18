@@ -1,10 +1,13 @@
 #include <flutter/dart_project.h>
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
+#include <shellapi.h>
 
 #include "flutter_window.h"
 #include "utils.h"
 #include "window_placement.h"
+
+#include <string>
 
 namespace {
 
@@ -31,6 +34,24 @@ Win32Window::Point CenteredOrigin(const Win32Window::Size& size) {
       static_cast<unsigned int>(y > work.top ? y : work.top + 24));
 }
 
+std::wstring GetProtocolUrlArgument() {
+  int argument_count = 0;
+  wchar_t** arguments = CommandLineToArgvW(GetCommandLineW(), &argument_count);
+  if (arguments == nullptr) {
+    return {};
+  }
+
+  std::wstring protocol_url;
+  for (int i = 1; i < argument_count; ++i) {
+    if (std::wstring(arguments[i]).find(L"://") != std::wstring::npos) {
+      protocol_url = arguments[i];
+      break;
+    }
+  }
+  LocalFree(arguments);
+  return protocol_url;
+}
+
 }  // namespace
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
@@ -44,20 +65,36 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // Single-instance check via Mutex
   HANDLE mutex = CreateMutex(nullptr, TRUE, L"Local\\WorkInsightTracker_SingleInstance_Mutex");
   if (GetLastError() == ERROR_ALREADY_EXISTS) {
-    HWND hwnd = FindWindow(L"FLUTTER_RUNNER_WIN32_WINDOW", L"WorkInsight Tracker");
+    HWND hwnd = nullptr;
+    for (int attempt = 0; attempt < 100 && hwnd == nullptr; ++attempt) {
+      hwnd = FindWindow(L"FLUTTER_RUNNER_WIN32_WINDOW", L"WorkInsight Tracker");
+      if (hwnd == nullptr) {
+        Sleep(50);
+      }
+    }
     if (hwnd) {
-      std::wstring cmd_line(command_line);
-      if (!cmd_line.empty()) {
+      const std::wstring protocol_url = GetProtocolUrlArgument();
+      if (!protocol_url.empty()) {
         COPYDATASTRUCT cds;
         cds.dwData = 1001;
-        cds.cbData = static_cast<DWORD>((cmd_line.length() + 1) * sizeof(wchar_t));
-        cds.lpData = const_cast<wchar_t*>(cmd_line.c_str());
-        SendMessage(hwnd, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&cds));
+        cds.cbData =
+            static_cast<DWORD>((protocol_url.length() + 1) * sizeof(wchar_t));
+        cds.lpData = const_cast<wchar_t*>(protocol_url.c_str());
+        DWORD_PTR receiver_result = 0;
+        const LRESULT send_result = SendMessageTimeout(
+            hwnd, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&cds),
+            SMTO_ABORTIFHUNG, 5000, &receiver_result);
+        if (send_result == 0 || receiver_result == 0) {
+          OutputDebugStringW(
+              L"Failed to forward the protocol URL to the running instance.\n");
+        }
       }
       SetForegroundWindow(hwnd);
       if (IsIconic(hwnd)) {
         ShowWindow(hwnd, SW_RESTORE);
       }
+    } else {
+      OutputDebugStringW(L"Could not find the running WorkInsight Tracker window.\n");
     }
     if (mutex) {
       ReleaseMutex(mutex);

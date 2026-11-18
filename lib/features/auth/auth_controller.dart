@@ -1,4 +1,6 @@
 import 'dart:convert';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -94,15 +96,20 @@ class AuthController extends Notifier<AuthState> {
 
         if (status && redirectUrl != null && redirectUrl.isNotEmpty) {
           final uri = Uri.parse(redirectUrl);
-          final launched =
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
+          final launched = await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+          );
           if (!launched) {
-            throw Exception('Could not open browser to redirect URL: $redirectUrl');
+            throw Exception(
+              'Could not open browser to redirect URL: $redirectUrl',
+            );
           }
           state = state.copyWith(isLoading: false);
         } else {
           final message =
-              jsonMap['message']?.toString() ?? 'Failed to generate tracker token';
+              jsonMap['message']?.toString() ??
+              'Failed to generate tracker token';
           throw Exception(message);
         }
       } else {
@@ -113,13 +120,66 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  Future<void> handlePortalToken(String token) async {
+  Future<void> handlePortalToken(
+    String token, {
+    String? roleType,
+    Map<String, dynamic>? userData,
+  }) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final user = await _repo.signInWithPortalToken(token);
+      final user = await _repo.signInWithPortalToken(
+        token,
+        roleType: roleType,
+        userData: userData,
+      );
       state = AuthState(user: user, isLoading: false);
     } catch (e) {
       state = AuthState(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<void> handlePortalLoginCallback({
+    required String? token,
+    String? roleType,
+    required BuildContext context,
+  }) async {
+    final receivedToken = token?.trim();
+    debugPrint(
+      'Portal login callback received; token present: '
+      '${receivedToken?.isNotEmpty == true}',
+    );
+
+    if (!context.mounted) {
+      debugPrint('Portal callback UI is no longer available');
+      return;
+    }
+
+    final hasToken = receivedToken?.isNotEmpty == true;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(hasToken ? 'Login Successfully!' : 'Login Callback Error'),
+        content: SingleChildScrollView(
+          child: Text(
+            hasToken
+                ? 'Callback received successfully.\n\n'
+                      'Received Token:\n$receivedToken\n\n'
+                      'Role Type:\n'
+                      '${roleType?.trim().isNotEmpty == true ? roleType : 'Not provided'}'
+                : 'The callback did not include a valid token.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+
+    if (hasToken) {
+      debugPrint('Portal callback processed successfully');
     }
   }
 
@@ -129,5 +189,6 @@ class AuthController extends Notifier<AuthState> {
   }
 }
 
-final authControllerProvider =
-    NotifierProvider<AuthController, AuthState>(AuthController.new);
+final authControllerProvider = NotifierProvider<AuthController, AuthState>(
+  AuthController.new,
+);

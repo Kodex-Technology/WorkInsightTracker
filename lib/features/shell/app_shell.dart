@@ -76,8 +76,7 @@ class AppShell extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final width = collapsed ? 72.0 : 224.0;
     final flags = ref.watch(featureTogglesProvider);
-    final isAdmin = auth.user?.isDevAdmin == true &&
-        AppEnv.allowLocalAdminTesting;
+    final isAdmin = auth.user?.isAdmin == true;
     final mainNav = _mainNavFor(flags, isAdmin: isAdmin);
     final title = _titleFor(location, mainNav);
     final showAdmin = isAdmin;
@@ -137,8 +136,8 @@ class AppShell extends ConsumerWidget {
                           ),
                         ),
                       for (final item in _manageNav)
-                        if (item.path == '/app/settings' ||
-                            (item.path == '/app/admin' && showAdmin && !isAdmin))
+                        if ((item.path == '/app/settings' && !isAdmin) ||
+                            (item.path == '/app/admin' && isAdmin))
                           _NavTile(
                             item: item,
                             selected: location.startsWith(item.path),
@@ -179,21 +178,69 @@ class AppShell extends ConsumerWidget {
                         ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                   child: Row(
                     children: [
-                      if (!collapsed)
-                        Expanded(
+                      if (auth.user?.profileImage != null &&
+                          auth.user!.profileImage!.isNotEmpty)
+                        CircleAvatar(
+                          radius: collapsed ? 14 : 16,
+                          backgroundImage: NetworkImage(auth.user!.profileImage!),
+                        )
+                      else
+                        CircleAvatar(
+                          radius: collapsed ? 14 : 16,
+                          backgroundColor: theme.colorScheme.primary
+                              .withValues(alpha: 0.15),
                           child: Text(
-                            auth.user?.displayName ?? 'Account',
-                            style: theme.textTheme.bodySmall,
-                            overflow: TextOverflow.ellipsis,
+                            (auth.user?.displayName ?? 'A').isNotEmpty
+                                ? auth.user!.displayName[0].toUpperCase()
+                                : 'A',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
+                      if (!collapsed) ...[
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                auth.user?.displayName ?? 'Account',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (auth.user?.organization != null ||
+                                  auth.user?.designation != null)
+                                Text(
+                                  [
+                                    if (auth.user?.organization != null)
+                                      auth.user!.organization!,
+                                    if (auth.user?.designation != null)
+                                      auth.user!.designation!,
+                                  ].join(' • '),
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
                       IconButton(
-                        tooltip: collapsed ? 'Expand sidebar' : 'Collapse sidebar',
-                        onPressed: () =>
-                            ref.read(sidebarCollapsedProvider.notifier).toggle(),
+                        tooltip: collapsed
+                            ? 'Expand sidebar'
+                            : 'Collapse sidebar',
+                        onPressed: () => ref
+                            .read(sidebarCollapsedProvider.notifier)
+                            .toggle(),
                         icon: Icon(
                           collapsed
                               ? Icons.chevron_right_rounded

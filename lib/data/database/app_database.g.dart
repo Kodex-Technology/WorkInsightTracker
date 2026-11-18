@@ -81,6 +81,93 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+    'role',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('user'),
+  );
+  static const VerificationMeta _firstNameMeta = const VerificationMeta(
+    'firstName',
+  );
+  @override
+  late final GeneratedColumn<String> firstName = GeneratedColumn<String>(
+    'first_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastNameMeta = const VerificationMeta(
+    'lastName',
+  );
+  @override
+  late final GeneratedColumn<String> lastName = GeneratedColumn<String>(
+    'last_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _profileImageMeta = const VerificationMeta(
+    'profileImage',
+  );
+  @override
+  late final GeneratedColumn<String> profileImage = GeneratedColumn<String>(
+    'profile_image',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _departmentMeta = const VerificationMeta(
+    'department',
+  );
+  @override
+  late final GeneratedColumn<String> department = GeneratedColumn<String>(
+    'department',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _designationMeta = const VerificationMeta(
+    'designation',
+  );
+  @override
+  late final GeneratedColumn<String> designation = GeneratedColumn<String>(
+    'designation',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _organizationMeta = const VerificationMeta(
+    'organization',
+  );
+  @override
+  late final GeneratedColumn<String> organization = GeneratedColumn<String>(
+    'organization',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _userDataJsonMeta = const VerificationMeta(
+    'userDataJson',
+  );
+  @override
+  late final GeneratedColumn<String> userDataJson = GeneratedColumn<String>(
+    'user_data_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -90,6 +177,14 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
     firebaseUid,
     authProvider,
     linkedAt,
+    role,
+    firstName,
+    lastName,
+    profileImage,
+    department,
+    designation,
+    organization,
+    userDataJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -159,6 +254,66 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
         linkedAt.isAcceptableOrUnknown(data['linked_at']!, _linkedAtMeta),
       );
     }
+    if (data.containsKey('role')) {
+      context.handle(
+        _roleMeta,
+        role.isAcceptableOrUnknown(data['role']!, _roleMeta),
+      );
+    }
+    if (data.containsKey('first_name')) {
+      context.handle(
+        _firstNameMeta,
+        firstName.isAcceptableOrUnknown(data['first_name']!, _firstNameMeta),
+      );
+    }
+    if (data.containsKey('last_name')) {
+      context.handle(
+        _lastNameMeta,
+        lastName.isAcceptableOrUnknown(data['last_name']!, _lastNameMeta),
+      );
+    }
+    if (data.containsKey('profile_image')) {
+      context.handle(
+        _profileImageMeta,
+        profileImage.isAcceptableOrUnknown(
+          data['profile_image']!,
+          _profileImageMeta,
+        ),
+      );
+    }
+    if (data.containsKey('department')) {
+      context.handle(
+        _departmentMeta,
+        department.isAcceptableOrUnknown(data['department']!, _departmentMeta),
+      );
+    }
+    if (data.containsKey('designation')) {
+      context.handle(
+        _designationMeta,
+        designation.isAcceptableOrUnknown(
+          data['designation']!,
+          _designationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('organization')) {
+      context.handle(
+        _organizationMeta,
+        organization.isAcceptableOrUnknown(
+          data['organization']!,
+          _organizationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('user_data_json')) {
+      context.handle(
+        _userDataJsonMeta,
+        userDataJson.isAcceptableOrUnknown(
+          data['user_data_json']!,
+          _userDataJsonMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -196,6 +351,38 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}linked_at'],
       ),
+      role: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role'],
+      )!,
+      firstName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}first_name'],
+      ),
+      lastName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_name'],
+      ),
+      profileImage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_image'],
+      ),
+      department: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}department'],
+      ),
+      designation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}designation'],
+      ),
+      organization: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}organization'],
+      ),
+      userDataJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}user_data_json'],
+      ),
     );
   }
 
@@ -215,6 +402,14 @@ class User extends DataClass implements Insertable<User> {
   final String? firebaseUid;
   final String? authProvider;
   final DateTime? linkedAt;
+  final String role;
+  final String? firstName;
+  final String? lastName;
+  final String? profileImage;
+  final String? department;
+  final String? designation;
+  final String? organization;
+  final String? userDataJson;
   const User({
     required this.id,
     required this.email,
@@ -223,6 +418,14 @@ class User extends DataClass implements Insertable<User> {
     this.firebaseUid,
     this.authProvider,
     this.linkedAt,
+    required this.role,
+    this.firstName,
+    this.lastName,
+    this.profileImage,
+    this.department,
+    this.designation,
+    this.organization,
+    this.userDataJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -239,6 +442,28 @@ class User extends DataClass implements Insertable<User> {
     }
     if (!nullToAbsent || linkedAt != null) {
       map['linked_at'] = Variable<DateTime>(linkedAt);
+    }
+    map['role'] = Variable<String>(role);
+    if (!nullToAbsent || firstName != null) {
+      map['first_name'] = Variable<String>(firstName);
+    }
+    if (!nullToAbsent || lastName != null) {
+      map['last_name'] = Variable<String>(lastName);
+    }
+    if (!nullToAbsent || profileImage != null) {
+      map['profile_image'] = Variable<String>(profileImage);
+    }
+    if (!nullToAbsent || department != null) {
+      map['department'] = Variable<String>(department);
+    }
+    if (!nullToAbsent || designation != null) {
+      map['designation'] = Variable<String>(designation);
+    }
+    if (!nullToAbsent || organization != null) {
+      map['organization'] = Variable<String>(organization);
+    }
+    if (!nullToAbsent || userDataJson != null) {
+      map['user_data_json'] = Variable<String>(userDataJson);
     }
     return map;
   }
@@ -258,6 +483,28 @@ class User extends DataClass implements Insertable<User> {
       linkedAt: linkedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(linkedAt),
+      role: Value(role),
+      firstName: firstName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(firstName),
+      lastName: lastName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastName),
+      profileImage: profileImage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(profileImage),
+      department: department == null && nullToAbsent
+          ? const Value.absent()
+          : Value(department),
+      designation: designation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(designation),
+      organization: organization == null && nullToAbsent
+          ? const Value.absent()
+          : Value(organization),
+      userDataJson: userDataJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(userDataJson),
     );
   }
 
@@ -274,6 +521,14 @@ class User extends DataClass implements Insertable<User> {
       firebaseUid: serializer.fromJson<String?>(json['firebaseUid']),
       authProvider: serializer.fromJson<String?>(json['authProvider']),
       linkedAt: serializer.fromJson<DateTime?>(json['linkedAt']),
+      role: serializer.fromJson<String>(json['role']),
+      firstName: serializer.fromJson<String?>(json['firstName']),
+      lastName: serializer.fromJson<String?>(json['lastName']),
+      profileImage: serializer.fromJson<String?>(json['profileImage']),
+      department: serializer.fromJson<String?>(json['department']),
+      designation: serializer.fromJson<String?>(json['designation']),
+      organization: serializer.fromJson<String?>(json['organization']),
+      userDataJson: serializer.fromJson<String?>(json['userDataJson']),
     );
   }
   @override
@@ -287,6 +542,14 @@ class User extends DataClass implements Insertable<User> {
       'firebaseUid': serializer.toJson<String?>(firebaseUid),
       'authProvider': serializer.toJson<String?>(authProvider),
       'linkedAt': serializer.toJson<DateTime?>(linkedAt),
+      'role': serializer.toJson<String>(role),
+      'firstName': serializer.toJson<String?>(firstName),
+      'lastName': serializer.toJson<String?>(lastName),
+      'profileImage': serializer.toJson<String?>(profileImage),
+      'department': serializer.toJson<String?>(department),
+      'designation': serializer.toJson<String?>(designation),
+      'organization': serializer.toJson<String?>(organization),
+      'userDataJson': serializer.toJson<String?>(userDataJson),
     };
   }
 
@@ -298,6 +561,14 @@ class User extends DataClass implements Insertable<User> {
     Value<String?> firebaseUid = const Value.absent(),
     Value<String?> authProvider = const Value.absent(),
     Value<DateTime?> linkedAt = const Value.absent(),
+    String? role,
+    Value<String?> firstName = const Value.absent(),
+    Value<String?> lastName = const Value.absent(),
+    Value<String?> profileImage = const Value.absent(),
+    Value<String?> department = const Value.absent(),
+    Value<String?> designation = const Value.absent(),
+    Value<String?> organization = const Value.absent(),
+    Value<String?> userDataJson = const Value.absent(),
   }) => User(
     id: id ?? this.id,
     email: email ?? this.email,
@@ -306,6 +577,14 @@ class User extends DataClass implements Insertable<User> {
     firebaseUid: firebaseUid.present ? firebaseUid.value : this.firebaseUid,
     authProvider: authProvider.present ? authProvider.value : this.authProvider,
     linkedAt: linkedAt.present ? linkedAt.value : this.linkedAt,
+    role: role ?? this.role,
+    firstName: firstName.present ? firstName.value : this.firstName,
+    lastName: lastName.present ? lastName.value : this.lastName,
+    profileImage: profileImage.present ? profileImage.value : this.profileImage,
+    department: department.present ? department.value : this.department,
+    designation: designation.present ? designation.value : this.designation,
+    organization: organization.present ? organization.value : this.organization,
+    userDataJson: userDataJson.present ? userDataJson.value : this.userDataJson,
   );
   User copyWithCompanion(UsersCompanion data) {
     return User(
@@ -322,6 +601,24 @@ class User extends DataClass implements Insertable<User> {
           ? data.authProvider.value
           : this.authProvider,
       linkedAt: data.linkedAt.present ? data.linkedAt.value : this.linkedAt,
+      role: data.role.present ? data.role.value : this.role,
+      firstName: data.firstName.present ? data.firstName.value : this.firstName,
+      lastName: data.lastName.present ? data.lastName.value : this.lastName,
+      profileImage: data.profileImage.present
+          ? data.profileImage.value
+          : this.profileImage,
+      department: data.department.present
+          ? data.department.value
+          : this.department,
+      designation: data.designation.present
+          ? data.designation.value
+          : this.designation,
+      organization: data.organization.present
+          ? data.organization.value
+          : this.organization,
+      userDataJson: data.userDataJson.present
+          ? data.userDataJson.value
+          : this.userDataJson,
     );
   }
 
@@ -334,7 +631,15 @@ class User extends DataClass implements Insertable<User> {
           ..write('createdAt: $createdAt, ')
           ..write('firebaseUid: $firebaseUid, ')
           ..write('authProvider: $authProvider, ')
-          ..write('linkedAt: $linkedAt')
+          ..write('linkedAt: $linkedAt, ')
+          ..write('role: $role, ')
+          ..write('firstName: $firstName, ')
+          ..write('lastName: $lastName, ')
+          ..write('profileImage: $profileImage, ')
+          ..write('department: $department, ')
+          ..write('designation: $designation, ')
+          ..write('organization: $organization, ')
+          ..write('userDataJson: $userDataJson')
           ..write(')'))
         .toString();
   }
@@ -348,6 +653,14 @@ class User extends DataClass implements Insertable<User> {
     firebaseUid,
     authProvider,
     linkedAt,
+    role,
+    firstName,
+    lastName,
+    profileImage,
+    department,
+    designation,
+    organization,
+    userDataJson,
   );
   @override
   bool operator ==(Object other) =>
@@ -359,7 +672,15 @@ class User extends DataClass implements Insertable<User> {
           other.createdAt == this.createdAt &&
           other.firebaseUid == this.firebaseUid &&
           other.authProvider == this.authProvider &&
-          other.linkedAt == this.linkedAt);
+          other.linkedAt == this.linkedAt &&
+          other.role == this.role &&
+          other.firstName == this.firstName &&
+          other.lastName == this.lastName &&
+          other.profileImage == this.profileImage &&
+          other.department == this.department &&
+          other.designation == this.designation &&
+          other.organization == this.organization &&
+          other.userDataJson == this.userDataJson);
 }
 
 class UsersCompanion extends UpdateCompanion<User> {
@@ -370,6 +691,14 @@ class UsersCompanion extends UpdateCompanion<User> {
   final Value<String?> firebaseUid;
   final Value<String?> authProvider;
   final Value<DateTime?> linkedAt;
+  final Value<String> role;
+  final Value<String?> firstName;
+  final Value<String?> lastName;
+  final Value<String?> profileImage;
+  final Value<String?> department;
+  final Value<String?> designation;
+  final Value<String?> organization;
+  final Value<String?> userDataJson;
   final Value<int> rowid;
   const UsersCompanion({
     this.id = const Value.absent(),
@@ -379,6 +708,14 @@ class UsersCompanion extends UpdateCompanion<User> {
     this.firebaseUid = const Value.absent(),
     this.authProvider = const Value.absent(),
     this.linkedAt = const Value.absent(),
+    this.role = const Value.absent(),
+    this.firstName = const Value.absent(),
+    this.lastName = const Value.absent(),
+    this.profileImage = const Value.absent(),
+    this.department = const Value.absent(),
+    this.designation = const Value.absent(),
+    this.organization = const Value.absent(),
+    this.userDataJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   UsersCompanion.insert({
@@ -389,6 +726,14 @@ class UsersCompanion extends UpdateCompanion<User> {
     this.firebaseUid = const Value.absent(),
     this.authProvider = const Value.absent(),
     this.linkedAt = const Value.absent(),
+    this.role = const Value.absent(),
+    this.firstName = const Value.absent(),
+    this.lastName = const Value.absent(),
+    this.profileImage = const Value.absent(),
+    this.department = const Value.absent(),
+    this.designation = const Value.absent(),
+    this.organization = const Value.absent(),
+    this.userDataJson = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        email = Value(email),
@@ -402,6 +747,14 @@ class UsersCompanion extends UpdateCompanion<User> {
     Expression<String>? firebaseUid,
     Expression<String>? authProvider,
     Expression<DateTime>? linkedAt,
+    Expression<String>? role,
+    Expression<String>? firstName,
+    Expression<String>? lastName,
+    Expression<String>? profileImage,
+    Expression<String>? department,
+    Expression<String>? designation,
+    Expression<String>? organization,
+    Expression<String>? userDataJson,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -412,6 +765,14 @@ class UsersCompanion extends UpdateCompanion<User> {
       if (firebaseUid != null) 'firebase_uid': firebaseUid,
       if (authProvider != null) 'auth_provider': authProvider,
       if (linkedAt != null) 'linked_at': linkedAt,
+      if (role != null) 'role': role,
+      if (firstName != null) 'first_name': firstName,
+      if (lastName != null) 'last_name': lastName,
+      if (profileImage != null) 'profile_image': profileImage,
+      if (department != null) 'department': department,
+      if (designation != null) 'designation': designation,
+      if (organization != null) 'organization': organization,
+      if (userDataJson != null) 'user_data_json': userDataJson,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -424,6 +785,14 @@ class UsersCompanion extends UpdateCompanion<User> {
     Value<String?>? firebaseUid,
     Value<String?>? authProvider,
     Value<DateTime?>? linkedAt,
+    Value<String>? role,
+    Value<String?>? firstName,
+    Value<String?>? lastName,
+    Value<String?>? profileImage,
+    Value<String?>? department,
+    Value<String?>? designation,
+    Value<String?>? organization,
+    Value<String?>? userDataJson,
     Value<int>? rowid,
   }) {
     return UsersCompanion(
@@ -434,6 +803,14 @@ class UsersCompanion extends UpdateCompanion<User> {
       firebaseUid: firebaseUid ?? this.firebaseUid,
       authProvider: authProvider ?? this.authProvider,
       linkedAt: linkedAt ?? this.linkedAt,
+      role: role ?? this.role,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      profileImage: profileImage ?? this.profileImage,
+      department: department ?? this.department,
+      designation: designation ?? this.designation,
+      organization: organization ?? this.organization,
+      userDataJson: userDataJson ?? this.userDataJson,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -462,6 +839,30 @@ class UsersCompanion extends UpdateCompanion<User> {
     if (linkedAt.present) {
       map['linked_at'] = Variable<DateTime>(linkedAt.value);
     }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (firstName.present) {
+      map['first_name'] = Variable<String>(firstName.value);
+    }
+    if (lastName.present) {
+      map['last_name'] = Variable<String>(lastName.value);
+    }
+    if (profileImage.present) {
+      map['profile_image'] = Variable<String>(profileImage.value);
+    }
+    if (department.present) {
+      map['department'] = Variable<String>(department.value);
+    }
+    if (designation.present) {
+      map['designation'] = Variable<String>(designation.value);
+    }
+    if (organization.present) {
+      map['organization'] = Variable<String>(organization.value);
+    }
+    if (userDataJson.present) {
+      map['user_data_json'] = Variable<String>(userDataJson.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -478,6 +879,14 @@ class UsersCompanion extends UpdateCompanion<User> {
           ..write('firebaseUid: $firebaseUid, ')
           ..write('authProvider: $authProvider, ')
           ..write('linkedAt: $linkedAt, ')
+          ..write('role: $role, ')
+          ..write('firstName: $firstName, ')
+          ..write('lastName: $lastName, ')
+          ..write('profileImage: $profileImage, ')
+          ..write('department: $department, ')
+          ..write('designation: $designation, ')
+          ..write('organization: $organization, ')
+          ..write('userDataJson: $userDataJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6919,6 +7328,14 @@ typedef $$UsersTableCreateCompanionBuilder =
       Value<String?> firebaseUid,
       Value<String?> authProvider,
       Value<DateTime?> linkedAt,
+      Value<String> role,
+      Value<String?> firstName,
+      Value<String?> lastName,
+      Value<String?> profileImage,
+      Value<String?> department,
+      Value<String?> designation,
+      Value<String?> organization,
+      Value<String?> userDataJson,
       Value<int> rowid,
     });
 typedef $$UsersTableUpdateCompanionBuilder =
@@ -6930,6 +7347,14 @@ typedef $$UsersTableUpdateCompanionBuilder =
       Value<String?> firebaseUid,
       Value<String?> authProvider,
       Value<DateTime?> linkedAt,
+      Value<String> role,
+      Value<String?> firstName,
+      Value<String?> lastName,
+      Value<String?> profileImage,
+      Value<String?> department,
+      Value<String?> designation,
+      Value<String?> organization,
+      Value<String?> userDataJson,
       Value<int> rowid,
     });
 
@@ -6973,6 +7398,46 @@ class $$UsersTableFilterComposer extends Composer<_$AppDatabase, $UsersTable> {
 
   ColumnFilters<DateTime> get linkedAt => $composableBuilder(
     column: $table.linkedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get firstName => $composableBuilder(
+    column: $table.firstName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastName => $composableBuilder(
+    column: $table.lastName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get profileImage => $composableBuilder(
+    column: $table.profileImage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get department => $composableBuilder(
+    column: $table.department,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get designation => $composableBuilder(
+    column: $table.designation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get organization => $composableBuilder(
+    column: $table.organization,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get userDataJson => $composableBuilder(
+    column: $table.userDataJson,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7020,6 +7485,46 @@ class $$UsersTableOrderingComposer
     column: $table.linkedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get firstName => $composableBuilder(
+    column: $table.firstName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastName => $composableBuilder(
+    column: $table.lastName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get profileImage => $composableBuilder(
+    column: $table.profileImage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get department => $composableBuilder(
+    column: $table.department,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get designation => $composableBuilder(
+    column: $table.designation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get organization => $composableBuilder(
+    column: $table.organization,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get userDataJson => $composableBuilder(
+    column: $table.userDataJson,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$UsersTableAnnotationComposer
@@ -7057,6 +7562,40 @@ class $$UsersTableAnnotationComposer
 
   GeneratedColumn<DateTime> get linkedAt =>
       $composableBuilder(column: $table.linkedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<String> get firstName =>
+      $composableBuilder(column: $table.firstName, builder: (column) => column);
+
+  GeneratedColumn<String> get lastName =>
+      $composableBuilder(column: $table.lastName, builder: (column) => column);
+
+  GeneratedColumn<String> get profileImage => $composableBuilder(
+    column: $table.profileImage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get department => $composableBuilder(
+    column: $table.department,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get designation => $composableBuilder(
+    column: $table.designation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get organization => $composableBuilder(
+    column: $table.organization,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get userDataJson => $composableBuilder(
+    column: $table.userDataJson,
+    builder: (column) => column,
+  );
 }
 
 class $$UsersTableTableManager
@@ -7094,6 +7633,14 @@ class $$UsersTableTableManager
                 Value<String?> firebaseUid = const Value.absent(),
                 Value<String?> authProvider = const Value.absent(),
                 Value<DateTime?> linkedAt = const Value.absent(),
+                Value<String> role = const Value.absent(),
+                Value<String?> firstName = const Value.absent(),
+                Value<String?> lastName = const Value.absent(),
+                Value<String?> profileImage = const Value.absent(),
+                Value<String?> department = const Value.absent(),
+                Value<String?> designation = const Value.absent(),
+                Value<String?> organization = const Value.absent(),
+                Value<String?> userDataJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => UsersCompanion(
                 id: id,
@@ -7103,6 +7650,14 @@ class $$UsersTableTableManager
                 firebaseUid: firebaseUid,
                 authProvider: authProvider,
                 linkedAt: linkedAt,
+                role: role,
+                firstName: firstName,
+                lastName: lastName,
+                profileImage: profileImage,
+                department: department,
+                designation: designation,
+                organization: organization,
+                userDataJson: userDataJson,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7114,6 +7669,14 @@ class $$UsersTableTableManager
                 Value<String?> firebaseUid = const Value.absent(),
                 Value<String?> authProvider = const Value.absent(),
                 Value<DateTime?> linkedAt = const Value.absent(),
+                Value<String> role = const Value.absent(),
+                Value<String?> firstName = const Value.absent(),
+                Value<String?> lastName = const Value.absent(),
+                Value<String?> profileImage = const Value.absent(),
+                Value<String?> department = const Value.absent(),
+                Value<String?> designation = const Value.absent(),
+                Value<String?> organization = const Value.absent(),
+                Value<String?> userDataJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => UsersCompanion.insert(
                 id: id,
@@ -7123,6 +7686,14 @@ class $$UsersTableTableManager
                 firebaseUid: firebaseUid,
                 authProvider: authProvider,
                 linkedAt: linkedAt,
+                role: role,
+                firstName: firstName,
+                lastName: lastName,
+                profileImage: profileImage,
+                department: department,
+                designation: designation,
+                organization: organization,
+                userDataJson: userDataJson,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
