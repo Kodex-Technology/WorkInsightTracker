@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:witrack/core/config/app_env.dart';
 
 enum AuthFlowStage {
@@ -40,4 +42,22 @@ class AuthUser {
 
   bool get isDevAdmin =>
       isLocalDev && role.isAdmin && AppEnv.allowLocalDevAuth;
+
+  /// Returns the specific role type string extracted from portal user data.
+  String? get rawRoleType {
+    if (userDataJson == null || userDataJson!.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(userDataJson!);
+      if (decoded is Map<String, dynamic>) {
+        final userRoleRaw = decoded['user_role'];
+        if (userRoleRaw is Map) {
+          final directType = userRoleRaw['role_type']?.toString();
+          if (directType != null && directType.trim().isNotEmpty) {
+            return directType.trim();
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
 }

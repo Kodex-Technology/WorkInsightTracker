@@ -71,25 +71,37 @@ class AuthRepository {
     Map<String, dynamic>? userData,
   }) async {
     final cleanToken = token.trim();
-    final email = userData?['email']?.toString() ??
-        'portal_user_${cleanToken.substring(0, cleanToken.length > 8 ? 8 : cleanToken.length)}@witrack.local';
+    if (cleanToken.isEmpty) {
+      throw Exception('Authentication token is missing.');
+    }
+    if (userData == null) {
+      throw Exception('User data is missing.');
+    }
 
-    final firstName = userData?['first_name']?.toString();
-    final lastName = userData?['last_name']?.toString();
-    final profileImage = userData?['profile_image']?.toString();
-    final department = userData?['department']?.toString();
+    final email = userData['email']?.toString().trim();
+    if (email == null || email.isEmpty) {
+      throw Exception('The portal user email is missing.');
+    }
+
+    final firstName = userData['first_name']?.toString();
+    final lastName = userData['last_name']?.toString();
+    final profileImage = userData['profile_image']?.toString();
+    final department = userData['department']?.toString() ??
+        userData['sub_department']?.toString();
 
     String? designationName;
-    final desigRaw = userData?['designation'];
+    final desigRaw = userData['designation'];
     if (desigRaw is Map) {
       designationName = desigRaw['designation_name']?.toString() ??
+          desigRaw['description']?.toString() ??
           desigRaw['name']?.toString();
     } else if (desigRaw is String) {
       designationName = desigRaw;
     }
+    designationName ??= userData['designation_name']?.toString();
 
     String? orgName;
-    final orgRaw = userData?['organization'];
+    final orgRaw = userData['organization'];
     if (orgRaw is Map) {
       orgName = orgRaw['name']?.toString();
     } else if (orgRaw is String) {
@@ -97,43 +109,58 @@ class AuthRepository {
     }
 
     final displayName = (firstName != null &&
-            firstName.isNotEmpty &&
+            firstName.trim().isNotEmpty &&
             lastName != null &&
-            lastName.isNotEmpty)
-        ? '$firstName $lastName'
-        : (userData?['name']?.toString() ?? 'Portal User');
+            lastName.trim().isNotEmpty)
+        ? '${firstName.trim()} ${lastName.trim()}'
+        : (firstName?.trim().isNotEmpty == true
+            ? firstName!.trim()
+            : (userData['name']?.toString() ?? 'Portal User'));
 
-    final orgAdmin = userData?['org_admin'];
-
-    final userRoleRaw = userData?['user_role'];
-    String? userRoleType;
-    String? userRoleName;
-    if (userRoleRaw is Map) {
-      userRoleType = userRoleRaw['role_type']?.toString();
-      userRoleName = userRoleRaw['role_name']?.toString();
+    final userRoleRaw = userData['user_role'];
+    if (userRoleRaw is! Map) {
+      throw Exception('User role information is missing.');
+    }
+    final normalizedRole =
+        (userRoleRaw['role_type']?.toString().trim() ?? '').toLowerCase();
+    if (normalizedRole.isEmpty) {
+      throw Exception('User role type is missing.');
     }
 
-    final lowerRole = (roleType ?? userRoleType ?? userRoleName ?? '')
-        .trim()
-        .toLowerCase();
     final AuthRole role;
-    if (
-        lowerRole == 'admin' ) {
+    if (normalizedRole == 'admin') {
       role = AuthRole.admin;
-    } else {
+    } else if (normalizedRole == 'employee') {
       role = AuthRole.user;
+    } else {
+      throw Exception('Unsupported portal role: ${userRoleRaw['role_type']}');
     }
-    final roleStr = role == AuthRole.admin ? 'admin' : 'user';
-    final userDataJsonStr = userData != null ? jsonEncode(userData) : null;
 
-    final existing = await (_db.select(_db.users)
+    final roleStr = role == AuthRole.admin ? 'admin' : 'user';
+    final userDataJsonStr = jsonEncode(userData);
+
+    final portalUuid = userData['uuid']?.toString().trim();
+    final portalId = userData['id']?.toString().trim();
+    final stablePortalId = portalUuid != null && portalUuid.isNotEmpty
+        ? 'portal_$portalUuid'
+        : (portalId != null && portalId.isNotEmpty
+            ? 'portal_$portalId'
+            : null);
+
+    User? existing;
+    if (stablePortalId != null) {
+      existing = await (_db.select(_db.users)
+            ..where((t) => t.id.equals(stablePortalId)))
+          .getSingleOrNull();
+    }
+    existing ??= await (_db.select(_db.users)
           ..where((t) => t.email.equals(email)))
         .getSingleOrNull();
 
     final user = existing ??
         await _db.into(_db.users).insertReturning(
               UsersCompanion.insert(
-                id: const Uuid().v4(),
+                id: stablePortalId ?? const Uuid().v4(),
                 email: email,
                 displayName: displayName,
                 createdAt: DateTime.now().toUtc(),
@@ -151,6 +178,7 @@ class AuthRepository {
 
     await (_db.update(_db.users)..where((t) => t.id.equals(user.id)))
         .write(UsersCompanion(
+      email: Value(email),
       role: Value(roleStr),
       displayName: Value(displayName),
       firstName: Value(firstName),
@@ -164,9 +192,6 @@ class AuthRepository {
 
     await _prefs.setString(_sessionKey, user.id);
     await _devices.upsertForUser(localUserId: user.id);
-    await _db.into(_db.appSettings).insertOnConflictUpdate(
-      AppSettingsCompanion.insert(key: 'onboardingCompleted', value: 'true'),
-    );
 
     return AuthUser(
       id: user.id,

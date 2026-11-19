@@ -127,13 +127,29 @@ class AuthController extends Notifier<AuthState> {
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
+      if (token.trim().isEmpty) {
+        throw Exception('Authentication token is missing.');
+      }
+      if (userData == null) {
+        throw Exception('User data is missing from callback.');
+      }
+      final roleRaw = userData['user_role'];
+      if (roleRaw is! Map) {
+        throw Exception('User role information is missing.');
+      }
+      final roleTypeFromJson = roleRaw['role_type']?.toString().trim() ?? '';
+      if (roleTypeFromJson.isEmpty) {
+        throw Exception('User role type is missing.');
+      }
+
       final user = await _repo.signInWithPortalToken(
         token,
-        roleType: roleType,
         userData: userData,
       );
       state = AuthState(user: user, isLoading: false);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Portal token authentication failed: $e');
+      debugPrintStack(stackTrace: stackTrace);
       state = AuthState(isLoading: false, error: e.toString());
     }
   }
@@ -141,6 +157,7 @@ class AuthController extends Notifier<AuthState> {
   Future<void> handlePortalLoginCallback({
     required String? token,
     String? roleType,
+    Map<String, dynamic>? userData,
     required BuildContext context,
   }) async {
     final receivedToken = token?.trim();
@@ -154,32 +171,91 @@ class AuthController extends Notifier<AuthState> {
       return;
     }
 
-    final hasToken = receivedToken?.isNotEmpty == true;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(hasToken ? 'Login Successfully!' : 'Login Callback Error'),
-        content: SingleChildScrollView(
-          child: Text(
-            hasToken
-                ? 'Callback received successfully.\n\n'
-                      'Received Token:\n$receivedToken\n\n'
-                      'Role Type:\n'
-                      '${roleType?.trim().isNotEmpty == true ? roleType : 'Not provided'}'
-                : 'The callback did not include a valid token.',
+    final hasToken = receivedToken != null &&
+        receivedToken.isNotEmpty &&
+        receivedToken != 'null' &&
+        receivedToken != 'undefined';
+
+    AuthUser? loggedInUser;
+    if (hasToken) {
+      try {
+        await handlePortalToken(receivedToken!, userData: userData);
+        loggedInUser = state.user;
+      } catch (e, stackTrace) {
+        debugPrint('Error signing in with portal token: $e');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    }
+
+    final user = loggedInUser ?? state.user;
+    final displayRole = user?.rawRoleType ??
+        roleType?.trim() ??
+        (user?.role == AuthRole.admin ? 'Admin' : 'User');
+
+    if (context.mounted) {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(hasToken && user != null
+              ? 'Login Successfully!'
+              : 'Login Callback Error'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (hasToken && user != null) ...[
+                  Text(
+                    'Welcome, ${user.displayName}!',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text('Email: ${user.email}'),
+                  const SizedBox(height: 4),
+                  Text('Role Type: $displayRole'),
+                  if (user.organization != null) ...[
+                    const SizedBox(height: 4),
+                    Text('Organization: ${user.organization}'),
+                  ],
+                  if (user.designation != null) ...[
+                    const SizedBox(height: 4),
+                    Text('Designation: ${user.designation}'),
+                  ],
+                  if (user.department != null) ...[
+                    const SizedBox(height: 4),
+                    Text('Department: ${user.department}'),
+                  ],
+                  const SizedBox(height: 12),
+                  Text(
+                    'Session token saved. You are now logged in.',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ] else ...[
+                  const Text(
+                    'The callback did not include a valid token or authentication failed.',
+                  ),
+                ],
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Close'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
+      );
+    }
 
     if (hasToken) {
-      debugPrint('Portal callback processed successfully');
+      debugPrint('Portal callback processed successfully for ${user?.email}');
     }
   }
 

@@ -20,7 +20,7 @@ class LoginScreen extends ConsumerWidget {
     ref.listen(authControllerProvider, (previous, next) {
       if (!next.isAuthenticated) return;
       // Let GoRouter redirect pick admin vs dashboard/onboarding.
-      if (next.user?.isDevAdmin == true) {
+      if (next.user?.isAdmin == true) {
         context.go('/app/admin');
       } else {
         context.go('/app/dashboard');

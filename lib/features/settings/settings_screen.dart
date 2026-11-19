@@ -31,8 +31,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final asyncSettings = ref.watch(settingsProvider);
-    final isAdmin = ref.watch(authControllerProvider).user?.isDevAdmin == true &&
-        AppEnv.allowLocalAdminTesting;
+    final isAdmin =
+        ref.watch(authControllerProvider).user?.isAdmin == true;
     final sections = <String>[
       'General',
       'Tracking',

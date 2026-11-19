@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:app_links/app_links.dart';
@@ -9,10 +10,15 @@ import 'package:witrack/app/router.dart';
 import 'package:witrack/features/auth/auth_controller.dart';
 
 class PortalLoginCallback {
-  const PortalLoginCallback({required this.token, this.roleType});
+  const PortalLoginCallback({
+    required this.token,
+    this.roleType,
+    this.userData,
+  });
 
   final String? token;
   final String? roleType;
+  final Map<String, dynamic>? userData;
 }
 
 PortalLoginCallback? parsePortalLoginCallback(Uri uri) {
@@ -28,14 +34,111 @@ PortalLoginCallback? parsePortalLoginCallback(Uri uri) {
   String? firstValue(Iterable<String> names) {
     for (final name in names) {
       final value = parameters[name]?.trim();
-      if (value != null && value.isNotEmpty) return value;
+      if (value != null &&
+          value.isNotEmpty &&
+          value != 'null' &&
+          value != 'undefined') {
+        return value;
+      }
     }
     return null;
   }
 
+  Map<String, dynamic>? tryParseJsonMap(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty || trimmed == '[object Object]') return null;
+
+    try {
+      final decoded = jsonDecode(trimmed);
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    } catch (_) {}
+
+    if (trimmed.contains('%')) {
+      try {
+        final decodedUrl = Uri.decodeComponent(trimmed);
+        final decoded = jsonDecode(decodedUrl);
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      } on FormatException {
+        // The normal Uri parser already decodes query parameters.
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
+  Map<String, dynamic>? userData;
+  final rawUserData = firstValue(
+    const ['user_data', 'userData', 'user', 'data', 'payload', 'profile'],
+  );
+  if (rawUserData != null) {
+    userData = tryParseJsonMap(rawUserData);
+    if (userData == null && rawUserData != '[object Object]') {
+      throw const FormatException('Invalid userData JSON.');
+    }
+  }
+
+  final email = userData?['email']?.toString() ??
+      userData?['user_email']?.toString() ??
+      userData?['email_address']?.toString() ??
+      firstValue(const ['email', 'user_email', 'email_address']);
+
+  final firstName = userData?['first_name']?.toString() ??
+      userData?['firstName']?.toString() ??
+      firstValue(const ['first_name', 'firstName']);
+
+  final lastName = userData?['last_name']?.toString() ??
+      userData?['lastName']?.toString() ??
+      firstValue(const ['last_name', 'lastName']);
+
+  final name = userData?['name']?.toString() ??
+      userData?['display_name']?.toString() ??
+      userData?['displayName']?.toString() ??
+      userData?['full_name']?.toString() ??
+      userData?['fullName']?.toString() ??
+      firstValue(
+        const ['name', 'display_name', 'displayName', 'full_name', 'fullName'],
+      );
+
+  final roleType = firstValue(
+        const ['role_type', 'roleType', 'role', 'user_role'],
+      ) ??
+      userData?['role_type']?.toString() ??
+      userData?['roleType']?.toString() ??
+      userData?['role']?.toString() ??
+      userData?['user_role']?.toString();
+
+  final department = userData?['department']?.toString() ??
+      userData?['sub_department']?.toString() ??
+      firstValue(const ['department', 'sub_department']);
+
+  final designation = userData?['designation']?.toString() ??
+      userData?['designation_name']?.toString() ??
+      firstValue(const ['designation', 'designation_name']);
+
+  final organization = userData?['organization']?.toString() ??
+      userData?['org_name']?.toString() ??
+      firstValue(const ['organization', 'org_name']);
+
   return PortalLoginCallback(
     token: firstValue(const ['token', 'access_token', 'accessToken']),
-    roleType: firstValue(const ['role_type', 'roleType', 'role']),
+    roleType: userData?['user_role'] is Map
+        ? (userData?['user_role'] as Map)['role_type']?.toString()
+        : firstValue(const ['role_type', 'roleType', 'role']),
+    userData: userData ?? (
+      parameters.keys.isNotEmpty &&
+      (parameters['email'] != null ||
+       parameters['first_name'] != null ||
+       parameters['name'] != null)
+        ? <String, dynamic>{
+            if (email != null) 'email': email,
+            if (firstName != null) 'first_name': firstName,
+            if (lastName != null) 'last_name': lastName,
+            if (name != null) 'name': name,
+            if (department != null) 'department': department,
+            if (designation != null) 'designation': designation,
+            if (organization != null) 'organization': organization,
+          }
+        : null),
   );
 }
 
@@ -146,16 +249,29 @@ class DeepLinkService {
   }
 
   void _handleUri(Uri uri) {
+    final token = uri.queryParameters['token'];
+    final userDataStr = uri.queryParameters['userData'];
+    debugPrint('========== TRACKER CALLBACK ==========');
+    debugPrint('Scheme: ${uri.scheme}');
+    debugPrint('Host: ${uri.host}');
+    debugPrint('Path: ${uri.path}');
+    debugPrint('Token parameter exists: ${token != null && token.trim().isNotEmpty}');
+    debugPrint('Token length: ${token?.trim().length ?? 0}');
+    debugPrint('UserData parameter exists: ${userDataStr != null}');
     debugPrint(
-      'Deep-link callback received: scheme=${uri.scheme}, '
-      'host=${uri.host}, path=${uri.path}',
+      userDataStr?.trim() == '[object Object]'
+          ? 'UserData was not JSON-serialized by the portal.'
+          : 'UserData contents omitted from logs.',
     );
+
+    debugPrint('======================================');
 
     final PortalLoginCallback? callback;
     try {
       callback = parsePortalLoginCallback(uri);
-    } on FormatException catch (error) {
-      debugPrint('Ignoring malformed deep-link parameters: ${error.message}');
+    } on FormatException catch (error, stackTrace) {
+      debugPrint('Malformed deep-link parameters: ${error.message}');
+      debugPrintStack(stackTrace: stackTrace);
       return;
     }
     if (callback == null) {
@@ -174,7 +290,47 @@ class DeepLinkService {
     _lastCallbackFingerprint = fingerprint;
     _lastCallbackAt = now;
 
-    debugPrint('Token received: ${callback.token?.isNotEmpty == true}');
+    if (callback.token == null || callback.token!.trim().isEmpty) {
+      debugPrint('Authentication token is missing.');
+      unawaited(
+        _ref
+            .read(authControllerProvider.notifier)
+            .handlePortalToken(
+              '',
+              userData: callback.userData,
+            ),
+      );
+      return;
+    }
+    if (callback.userData == null) {
+      debugPrint('User data is missing or invalid in callback.');
+      unawaited(
+        _ref
+            .read(authControllerProvider.notifier)
+            .handlePortalToken(
+              callback.token!,
+              userData: null,
+            ),
+      );
+      return;
+    }
+
+    final userDataMap = callback.userData!;
+    debugPrint('========== USER DATA RECEIVED ==========');
+    debugPrint('User ID: ${userDataMap['id']}');
+    debugPrint('Email: ${userDataMap['email']}');
+    debugPrint('First Name: ${userDataMap['first_name']}');
+    debugPrint('Last Name: ${userDataMap['last_name']}');
+    final userRole = userDataMap['user_role'];
+    debugPrint('Role Name: ${userRole is Map ? userRole['role_name'] : null}');
+    debugPrint('Role Type: ${userRole is Map ? userRole['role_type'] : null}');
+    final organization = userDataMap['organization'];
+    final designation = userDataMap['designation'];
+    debugPrint('Organization: ${organization is Map ? organization['name'] : organization}');
+    debugPrint('Designation: ${designation is Map ? designation['designation_name'] : designation}');
+    debugPrint('========================================');
+
+    debugPrint('Token length: ${callback.token!.trim().length}');
     debugPrint('Role type received: ${callback.roleType ?? '(missing)'}');
     _pendingCallbacks.add(callback);
     unawaited(_deliverCallbacks());
@@ -201,10 +357,9 @@ class DeepLinkService {
         try {
           await _ref
               .read(authControllerProvider.notifier)
-              .handlePortalLoginCallback(
-                token: callback.token,
-                roleType: callback.roleType,
-                context: context,
+              .handlePortalToken(
+                callback.token!,
+                userData: callback.userData,
               );
         } catch (error, stackTrace) {
           debugPrint('Could not display the portal callback result: $error');

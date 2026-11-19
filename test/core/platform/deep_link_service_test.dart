@@ -42,5 +42,57 @@ void main() {
         isNull,
       );
     });
+
+    test('decodes JSON string in userData parameter', () {
+      final uri = Uri.parse(
+        'witrack://login?token=validToken&userData=%7B%22email%22%3A%22user%40example.com%22%2C%22first_name%22%3A%22Jane%22%7D',
+      );
+      final callback = parsePortalLoginCallback(uri);
+
+      expect(callback?.token, 'validToken');
+      expect(callback?.userData?['email'], 'user@example.com');
+      expect(callback?.userData?['first_name'], 'Jane');
+    });
+
+    test('preserves the complete nested user JSON and extracts nested role type', () {
+      final uri = Uri.parse(
+        'witrack://login?token=validToken&userData=%7B%22email%22%3A%22admin%40example.com%22%2C%22first_name%22%3A%22Demo%22%2C%22user_role%22%3A%7B%22role_name%22%3A%22Super%20Admin%22%2C%22role_type%22%3A%22Admin%22%7D%2C%22organization%22%3A%7B%22name%22%3A%22WorkInsight%22%7D%7D',
+      );
+      final callback = parsePortalLoginCallback(uri);
+
+      expect(callback?.userData?['email'], 'admin@example.com');
+      expect(callback?.userData?['organization']['name'], 'WorkInsight');
+      expect(callback?.roleType, 'Admin');
+    });
+
+    test('rejects malformed userData JSON', () {
+      final uri = Uri.parse(
+        'witrack://login?token=validToken&userData=%7Bnot-json',
+      );
+
+      expect(
+        () => parsePortalLoginCallback(uri),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('handles JS object stringification [object Object] and falls back to top-level params', () {
+      final uri = Uri.parse(
+        'witrack://login?token=validToken&userData=%5Bobject%20Object%5D&email=fallback%40example.com&name=John%20Doe',
+      );
+      final callback = parsePortalLoginCallback(uri);
+
+      expect(callback?.token, 'validToken');
+      expect(callback?.userData?['email'], 'fallback@example.com');
+      expect(callback?.userData?['name'], 'John Doe');
+    });
+
+    test('filters out literal undefined or null token values', () {
+      final uri = Uri.parse('witrack://login?token=undefined&role_type=User');
+      final callback = parsePortalLoginCallback(uri);
+
+      expect(callback?.token, isNull);
+      expect(callback?.roleType, 'User');
+    });
   });
 }

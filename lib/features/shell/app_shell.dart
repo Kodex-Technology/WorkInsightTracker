@@ -217,13 +217,16 @@ class AppShell extends ConsumerWidget {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               if (auth.user?.organization != null ||
-                                  auth.user?.designation != null)
+                                  auth.user?.designation != null ||
+                                  auth.user?.rawRoleType != null)
                                 Text(
                                   [
                                     if (auth.user?.organization != null)
                                       auth.user!.organization!,
                                     if (auth.user?.designation != null)
-                                      auth.user!.designation!,
+                                      auth.user!.designation!
+                                    else if (auth.user?.rawRoleType != null)
+                                      auth.user!.rawRoleType!,
                                   ].join(' • '),
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
