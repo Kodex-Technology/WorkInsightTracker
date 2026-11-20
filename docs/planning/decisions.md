@@ -71,3 +71,10 @@
 **Decision:** Enforce single-instance execution on Windows using a named Mutex and `WM_COPYDATA` message forwarding. When a deep link (`witrack://...`) is opened while the app is running, the second instance forwards the URI to the running instance, brings the existing window to the foreground, navigates to authentication, and exits.
 **Why:** Prevents multiple tracker window instances and ensures deep link tokens (auth flow) are seamlessly handled by the active running instance.
 **Date:** 2026-11-13
+
+## ADR-013 — Optional Project and Task for Tracking Start
+
+**Decision:** Make project and task selection optional for starting tracking. Users can start the timer without a project or task, or select a project and task if desired.
+**Why:** Increases flexibility for unstructured work while maintaining full project/task attribution when projects/tasks are used.
+**Date:** 2026-11-13
+

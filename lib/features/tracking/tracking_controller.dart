@@ -387,12 +387,6 @@ class TrackingController extends Notifier<TrackingUiState> {
       state = state.copyWith(errorMessage: 'Sign in required.');
       return;
     }
-    if (state.projectId == null || state.taskId == null) {
-      state = state.copyWith(
-        errorMessage: 'Create a project and task, then select the task to start.',
-      );
-      return;
-    }
     if (!state.status.canStart) return;
 
     state = state.copyWith(

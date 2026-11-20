@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:witrack/core/config/app_env.dart';
+import 'package:witrack/core/platform/deep_link_service.dart';
 import 'package:witrack/data/auth/auth_repository.dart';
 import 'package:witrack/data/providers.dart';
 
@@ -55,7 +56,7 @@ class AuthController extends Notifier<AuthState> {
       final user = await _repo.restoreSession();
       state = AuthState(user: user, isLoading: false);
     } catch (e) {
-      state = AuthState(isLoading: false, error: e.toString());
+      state = AuthState(isLoading: false, error: _cleanErrorMessage(e));
     }
   }
 
@@ -65,7 +66,7 @@ class AuthController extends Notifier<AuthState> {
       final user = await _repo.signInLocalDev();
       state = AuthState(user: user, isLoading: false);
     } catch (e) {
-      state = AuthState(isLoading: false, error: e.toString());
+      state = AuthState(isLoading: false, error: _cleanErrorMessage(e));
     }
   }
 
@@ -75,7 +76,7 @@ class AuthController extends Notifier<AuthState> {
       final user = await _repo.signInLocalAdmin();
       state = AuthState(user: user, isLoading: false);
     } catch (e) {
-      state = AuthState(isLoading: false, error: e.toString());
+      state = AuthState(isLoading: false, error: _cleanErrorMessage(e));
     }
   }
 
@@ -116,19 +117,65 @@ class AuthController extends Notifier<AuthState> {
         throw Exception('Server error (HTTP ${response.statusCode})');
       }
     } catch (e) {
-      state = AuthState(isLoading: false, error: e.toString());
+      state = AuthState(isLoading: false, error: _cleanErrorMessage(e));
     }
+  }
+
+  Future<void> handlePortalCallback(PortalLoginCallback callback) async {
+    if (callback.isCancelled) {
+      final msg = callback.message?.trim().isNotEmpty == true
+          ? callback.message!.trim()
+          : 'You cancelled the tracker authentication.';
+      state = state.copyWith(
+        isLoading: false,
+        error: msg,
+      );
+      return;
+    }
+
+    if (!callback.hasToken) {
+      final msg = callback.message?.trim().isNotEmpty == true
+          ? callback.message!.trim()
+          : 'Authentication token is missing.';
+      state = state.copyWith(
+        isLoading: false,
+        error: msg,
+      );
+      return;
+    }
+
+    await handlePortalToken(
+      callback.token!,
+      roleType: callback.roleType,
+      userData: callback.userData,
+      status: callback.status,
+      message: callback.message,
+    );
   }
 
   Future<void> handlePortalToken(
     String token, {
     String? roleType,
     Map<String, dynamic>? userData,
+    String? status,
+    String? message,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
+      if (status?.toLowerCase() == 'cancelled' ||
+          status?.toLowerCase() == 'cancel') {
+        throw Exception(
+          message?.trim().isNotEmpty == true
+              ? message!.trim()
+              : 'You cancelled the tracker authentication.',
+        );
+      }
       if (token.trim().isEmpty) {
-        throw Exception('Authentication token is missing.');
+        throw Exception(
+          message?.trim().isNotEmpty == true
+              ? message!.trim()
+              : 'Authentication token is missing.',
+        );
       }
       if (userData == null) {
         throw Exception('User data is missing from callback.');
@@ -150,8 +197,16 @@ class AuthController extends Notifier<AuthState> {
     } catch (e, stackTrace) {
       debugPrint('Portal token authentication failed: $e');
       debugPrintStack(stackTrace: stackTrace);
-      state = AuthState(isLoading: false, error: e.toString());
+      state = AuthState(isLoading: false, error: _cleanErrorMessage(e));
     }
+  }
+
+  String _cleanErrorMessage(Object error) {
+    var msg = error.toString();
+    if (msg.startsWith('Exception: ')) {
+      msg = msg.substring('Exception: '.length);
+    }
+    return msg.trim();
   }
 
   Future<void> handlePortalLoginCallback({

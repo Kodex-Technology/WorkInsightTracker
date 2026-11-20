@@ -14,11 +14,28 @@ class PortalLoginCallback {
     required this.token,
     this.roleType,
     this.userData,
+    this.status,
+    this.message,
   });
 
   final String? token;
   final String? roleType;
   final Map<String, dynamic>? userData;
+  final String? status;
+  final String? message;
+
+  bool get isCancelled {
+    final s = status?.trim().toLowerCase();
+    if (s == 'cancelled' || s == 'cancel') return true;
+    if (message != null && message!.toLowerCase().contains('cancel')) return true;
+    return false;
+  }
+
+  bool get hasToken =>
+      token != null &&
+      token!.trim().isNotEmpty &&
+      token != 'null' &&
+      token != 'undefined';
 }
 
 PortalLoginCallback? parsePortalLoginCallback(Uri uri) {
@@ -43,6 +60,14 @@ PortalLoginCallback? parsePortalLoginCallback(Uri uri) {
     }
     return null;
   }
+
+  final status = firstValue(
+    const ['status', 'state', 'result', 'code', 'error'],
+  );
+
+  final message = firstValue(
+    const ['message', 'msg', 'error_description', 'error_message', 'reason', 'details'],
+  );
 
   Map<String, dynamic>? tryParseJsonMap(String input) {
     final trimmed = input.trim();
@@ -121,6 +146,8 @@ PortalLoginCallback? parsePortalLoginCallback(Uri uri) {
 
   return PortalLoginCallback(
     token: firstValue(const ['token', 'access_token', 'accessToken']),
+    status: status,
+    message: message,
     roleType: userData?['user_role'] is Map
         ? (userData?['user_role'] as Map)['role_type']?.toString()
         : firstValue(const ['role_type', 'roleType', 'role']),
@@ -251,10 +278,14 @@ class DeepLinkService {
   void _handleUri(Uri uri) {
     final token = uri.queryParameters['token'];
     final userDataStr = uri.queryParameters['userData'];
+    final statusStr = uri.queryParameters['status'];
+    final messageStr = uri.queryParameters['message'];
     debugPrint('========== TRACKER CALLBACK ==========');
     debugPrint('Scheme: ${uri.scheme}');
     debugPrint('Host: ${uri.host}');
     debugPrint('Path: ${uri.path}');
+    debugPrint('Status parameter: $statusStr');
+    debugPrint('Message parameter: $messageStr');
     debugPrint('Token parameter exists: ${token != null && token.trim().isNotEmpty}');
     debugPrint('Token length: ${token?.trim().length ?? 0}');
     debugPrint('UserData parameter exists: ${userDataStr != null}');
@@ -290,48 +321,29 @@ class DeepLinkService {
     _lastCallbackFingerprint = fingerprint;
     _lastCallbackAt = now;
 
-    if (callback.token == null || callback.token!.trim().isEmpty) {
-      debugPrint('Authentication token is missing.');
-      unawaited(
-        _ref
-            .read(authControllerProvider.notifier)
-            .handlePortalToken(
-              '',
-              userData: callback.userData,
-            ),
-      );
-      return;
-    }
-    if (callback.userData == null) {
-      debugPrint('User data is missing or invalid in callback.');
-      unawaited(
-        _ref
-            .read(authControllerProvider.notifier)
-            .handlePortalToken(
-              callback.token!,
-              userData: null,
-            ),
-      );
-      return;
+    if (callback.isCancelled) {
+      debugPrint('Portal authentication was cancelled: ${callback.message}');
+    } else if (!callback.hasToken) {
+      debugPrint('Authentication token is missing from callback.');
+    } else if (callback.userData != null) {
+      final userDataMap = callback.userData!;
+      debugPrint('========== USER DATA RECEIVED ==========');
+      debugPrint('User ID: ${userDataMap['id']}');
+      debugPrint('Email: ${userDataMap['email']}');
+      debugPrint('First Name: ${userDataMap['first_name']}');
+      debugPrint('Last Name: ${userDataMap['last_name']}');
+      final userRole = userDataMap['user_role'];
+      debugPrint('Role Name: ${userRole is Map ? userRole['role_name'] : null}');
+      debugPrint('Role Type: ${userRole is Map ? userRole['role_type'] : null}');
+      final organization = userDataMap['organization'];
+      final designation = userDataMap['designation'];
+      debugPrint('Organization: ${organization is Map ? organization['name'] : organization}');
+      debugPrint('Designation: ${designation is Map ? designation['designation_name'] : designation}');
+      debugPrint('========================================');
+      debugPrint('Token length: ${callback.token!.trim().length}');
+      debugPrint('Role type received: ${callback.roleType ?? '(missing)'}');
     }
 
-    final userDataMap = callback.userData!;
-    debugPrint('========== USER DATA RECEIVED ==========');
-    debugPrint('User ID: ${userDataMap['id']}');
-    debugPrint('Email: ${userDataMap['email']}');
-    debugPrint('First Name: ${userDataMap['first_name']}');
-    debugPrint('Last Name: ${userDataMap['last_name']}');
-    final userRole = userDataMap['user_role'];
-    debugPrint('Role Name: ${userRole is Map ? userRole['role_name'] : null}');
-    debugPrint('Role Type: ${userRole is Map ? userRole['role_type'] : null}');
-    final organization = userDataMap['organization'];
-    final designation = userDataMap['designation'];
-    debugPrint('Organization: ${organization is Map ? organization['name'] : organization}');
-    debugPrint('Designation: ${designation is Map ? designation['designation_name'] : designation}');
-    debugPrint('========================================');
-
-    debugPrint('Token length: ${callback.token!.trim().length}');
-    debugPrint('Role type received: ${callback.roleType ?? '(missing)'}');
     _pendingCallbacks.add(callback);
     unawaited(_deliverCallbacks());
   }
@@ -357,10 +369,7 @@ class DeepLinkService {
         try {
           await _ref
               .read(authControllerProvider.notifier)
-              .handlePortalToken(
-                callback.token!,
-                userData: callback.userData,
-              );
+              .handlePortalCallback(callback);
         } catch (error, stackTrace) {
           debugPrint('Could not display the portal callback result: $error');
           debugPrintStack(stackTrace: stackTrace);

@@ -60,7 +60,6 @@ class AppShell extends ConsumerWidget {
 
   static const _manageNav = <_NavItem>[
     _NavItem('Settings', Icons.tune_rounded, '/app/settings'),
-    _NavItem('Admin', Icons.admin_panel_settings_outlined, '/app/admin'),
   ];
 
   @override
@@ -126,24 +125,24 @@ class AppShell extends ConsumerWidget {
                           collapsed: collapsed,
                           onTap: () => context.go(item.path),
                         ),
-                      const SizedBox(height: 12),
-                      if (!collapsed)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-                          child: Text(
-                            'MANAGE',
-                            style: theme.textTheme.labelSmall,
+                      if (isAdmin) ...[
+                        const SizedBox(height: 12),
+                        if (!collapsed)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                            child: Text(
+                              'MANAGE',
+                              style: theme.textTheme.labelSmall,
+                            ),
                           ),
-                        ),
-                      for (final item in _manageNav)
-                        if ((item.path == '/app/settings' && !isAdmin) ||
-                            (item.path == '/app/admin' && isAdmin))
+                        for (final item in _manageNav)
                           _NavTile(
                             item: item,
                             selected: location.startsWith(item.path),
                             collapsed: collapsed,
                             onTap: () => context.go(item.path),
                           ),
+                      ],
                     ],
                   ),
                 ),

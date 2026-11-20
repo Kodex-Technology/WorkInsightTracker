@@ -12,6 +12,7 @@ class AuthUser {
     required this.id,
     required this.email,
     required this.displayName,
+    this.token,
     this.firstName,
     this.lastName,
     this.profileImage,
@@ -27,6 +28,7 @@ class AuthUser {
   final String id;
   final String email;
   final String displayName;
+  final String? token;
   final String? firstName;
   final String? lastName;
   final String? profileImage;

@@ -18,19 +18,23 @@ class AuthRepository {
   final DeviceRegistry _devices;
 
   static const _sessionKey = 'witrack.session.userId';
+  static const _tokenKey = 'witrack.session.token';
   static const _devEmail = 'dev@witrack.local';
   static const _adminEmail = 'admin@witrack.local';
 
+  String? get authToken => _prefs.getString(_tokenKey);
+
   Future<AuthUser?> restoreSession() async {
     final userId = _prefs.getString(_sessionKey);
+    final token = _prefs.getString(_tokenKey);
     if (userId == null) return null;
     final row = await (_db.select(_db.users)..where((t) => t.id.equals(userId)))
         .getSingleOrNull();
     if (row == null) {
-      await _prefs.remove(_sessionKey);
+      await signOut();
       return null;
     }
-    final user = _toLocalUser(row);
+    final user = _toLocalUser(row, token: token);
     if (user.isDevAdmin && !AppEnv.allowLocalAdminTesting) {
       await signOut();
       return null;
@@ -191,12 +195,14 @@ class AuthRepository {
     ));
 
     await _prefs.setString(_sessionKey, user.id);
+    await _prefs.setString(_tokenKey, cleanToken);
     await _devices.upsertForUser(localUserId: user.id);
 
     return AuthUser(
       id: user.id,
       email: email,
       displayName: displayName,
+      token: cleanToken,
       firstName: firstName,
       lastName: lastName,
       profileImage: profileImage,
@@ -242,7 +248,14 @@ class AuthRepository {
   }
 
   Future<void> signOut() async {
+    final userId = _prefs.getString(_sessionKey);
     await _prefs.remove(_sessionKey);
+    await _prefs.remove(_tokenKey);
+    if (userId != null) {
+      await (_db.delete(_db.users)..where((t) => t.id.equals(userId))).go();
+    } else {
+      await _db.delete(_db.users).go();
+    }
   }
 
   Future<void> resetTestAccount() async {
@@ -259,7 +272,7 @@ class AuthRepository {
         .watch();
   }
 
-  AuthUser _toLocalUser(User row) {
+  AuthUser _toLocalUser(User row, {String? token}) {
     final isAdminLocal =
         AppEnv.allowLocalAdminTesting && row.email == _adminEmail;
     final rowRole = row.role == 'admin' ? AuthRole.admin : AuthRole.user;
@@ -268,6 +281,7 @@ class AuthRepository {
       id: row.id,
       email: row.email,
       displayName: row.displayName,
+      token: token,
       firstName: row.firstName,
       lastName: row.lastName,
       profileImage: row.profileImage,

@@ -12,11 +12,7 @@ class TrackingControls extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(trackingControllerProvider.notifier);
     final theme = Theme.of(context);
-    final canStart = state.status.canStart &&
-        state.projectId != null &&
-        state.taskId != null;
-    final needsTask = state.status.canStart &&
-        (state.projectId == null || state.taskId == null);
+    final canStart = state.status.canStart;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,15 +74,6 @@ class TrackingControls extends ConsumerWidget {
               ),
           ],
         ),
-        if (needsTask) ...[
-          const SizedBox(height: 8),
-          Text(
-            'Add a project and task, then click the task (or Start) to begin.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
         if (state.status == TrackingStatus.idle) ...[
           const SizedBox(height: 8),
           Text(

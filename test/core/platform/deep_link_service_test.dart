@@ -94,5 +94,32 @@ void main() {
       expect(callback?.token, isNull);
       expect(callback?.roleType, 'User');
     });
+
+    test('parses cancelled status and message from portal callback', () {
+      final uri = Uri.parse(
+        'witrack://login?status=cancelled&message=You%20cancelled%20the%20tracker%20authentication.',
+      );
+      final callback = parsePortalLoginCallback(uri);
+
+      expect(callback, isNotNull);
+      expect(callback?.token, isNull);
+      expect(callback?.status, 'cancelled');
+      expect(callback?.message, 'You cancelled the tracker authentication.');
+      expect(callback?.isCancelled, isTrue);
+      expect(callback?.hasToken, isFalse);
+    });
+
+    test('parses error description parameter and detects cancellation keyword', () {
+      final uri = Uri.parse(
+        'witrack://login?error=cancelled&error_description=User%20cancelled%20the%20login%20flow',
+      );
+      final callback = parsePortalLoginCallback(uri);
+
+      expect(callback, isNotNull);
+      expect(callback?.token, isNull);
+      expect(callback?.status, 'cancelled');
+      expect(callback?.message, 'User cancelled the login flow');
+      expect(callback?.isCancelled, isTrue);
+    });
   });
 }

@@ -59,6 +59,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         }
       }
       final loc = state.matchedLocation;
+      if (loc.startsWith('/app/settings') && auth.user?.isAdmin != true) {
+        return '/app/dashboard';
+      }
       // Admin accounts stay out of personal tracking surfaces.
       if (auth.user?.isAdmin == true) {
         const tracking = [
