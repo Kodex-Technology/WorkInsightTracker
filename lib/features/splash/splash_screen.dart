@@ -47,7 +47,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       return;
     }
     context.go(
-      auth.user?.isDevAdmin == true ? '/app/admin' : '/app/dashboard',
+      auth.user?.isAdmin == true ? '/app/admin' : '/app/dashboard',
     );
   }
 

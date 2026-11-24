@@ -12,6 +12,14 @@ class Users extends Table {
   TextColumn get firebaseUid => text().nullable()();
   TextColumn get authProvider => text().nullable()();
   DateTimeColumn get linkedAt => dateTime().nullable()();
+  TextColumn get role => text().withDefault(const Constant('user'))();
+  TextColumn get firstName => text().nullable()();
+  TextColumn get lastName => text().nullable()();
+  TextColumn get profileImage => text().nullable()();
+  TextColumn get department => text().nullable()();
+  TextColumn get designation => text().nullable()();
+  TextColumn get organization => text().nullable()();
+  TextColumn get userDataJson => text().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -213,7 +221,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -250,6 +258,18 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(screenshots, screenshots.taskId);
             await m.addColumn(screenshots, screenshots.takenDay);
             await m.addColumn(screenshots, screenshots.metadataJson);
+          }
+          if (from < 5) {
+            await m.addColumn(users, users.role);
+          }
+          if (from < 6) {
+            await m.addColumn(users, users.firstName);
+            await m.addColumn(users, users.lastName);
+            await m.addColumn(users, users.profileImage);
+            await m.addColumn(users, users.department);
+            await m.addColumn(users, users.designation);
+            await m.addColumn(users, users.organization);
+            await m.addColumn(users, users.userDataJson);
           }
         },
       );

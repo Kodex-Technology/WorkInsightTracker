@@ -71,7 +71,7 @@ class LiveSessionTimer extends ConsumerWidget {
           children: [
             Icon(
               taskName == null
-                  ? Icons.radio_button_unchecked
+                  ? Icons.play_circle_outline_rounded
                   : Icons.task_alt_rounded,
               size: 16,
               color: taskName == null ? muted : accent,
@@ -80,7 +80,9 @@ class LiveSessionTimer extends ConsumerWidget {
             Expanded(
               child: Text(
                 taskName == null
-                    ? 'Select a task below to start'
+                    ? (open
+                        ? 'General tracking'
+                        : 'Ready to track (project & task optional)')
                     : '${projectName ?? 'Project'} · $taskName',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

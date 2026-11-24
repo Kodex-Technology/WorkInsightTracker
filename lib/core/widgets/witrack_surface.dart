@@ -70,9 +70,9 @@ class WitrackSurface extends StatelessWidget {
       ),
       child: DefaultTextStyle.merge(
         style: theme.textTheme.bodyMedium,
-        child: Material(
-          type: MaterialType.transparency,
-          child: Padding(padding: padding, child: child),
+        child: Padding(
+          padding: padding,
+          child: Material(color: Colors.transparent, child: child),
         ),
       ),
     );
@@ -88,10 +88,10 @@ class SectionLabel extends StatelessWidget {
     return Text(
       text.toUpperCase(),
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        letterSpacing: 0.8,
-        fontWeight: FontWeight.w600,
-        color: Theme.of(context).textTheme.bodySmall?.color,
-      ),
+            letterSpacing: 0.8,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).textTheme.bodySmall?.color,
+          ),
     );
   }
 }

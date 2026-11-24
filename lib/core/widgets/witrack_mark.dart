@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:witrack/core/theme/witrack_colors.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 /// WorkInsight diamond mark. Tints for light/dark automatically (no glow).
 class WitrackMark extends StatelessWidget {
@@ -11,7 +12,7 @@ class WitrackMark extends StatelessWidget {
     this.forceColor,
   });
 
-  static const assetPath = 'assets/branding/workinsight_mark.png';
+  static const assetPath = 'assets/branding/workinsight_mark.svg';
 
   final double size;
   final bool showGlow;
@@ -26,15 +27,11 @@ class WitrackMark extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: ColorFiltered(
+      child: SvgPicture.asset(
+        assetPath,
+        width: size,
+        height: size,
         colorFilter: ColorFilter.mode(glyph, BlendMode.srcIn),
-        child: Image.asset(
-          assetPath,
-          width: size,
-          height: size,
-          filterQuality: FilterQuality.high,
-          gaplessPlayback: true,
-        ),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -17,19 +18,23 @@ class AuthRepository {
   final DeviceRegistry _devices;
 
   static const _sessionKey = 'witrack.session.userId';
+  static const _tokenKey = 'witrack.session.token';
   static const _devEmail = 'dev@witrack.local';
   static const _adminEmail = 'admin@witrack.local';
 
+  String? get authToken => _prefs.getString(_tokenKey);
+
   Future<AuthUser?> restoreSession() async {
     final userId = _prefs.getString(_sessionKey);
+    final token = _prefs.getString(_tokenKey);
     if (userId == null) return null;
     final row = await (_db.select(_db.users)..where((t) => t.id.equals(userId)))
         .getSingleOrNull();
     if (row == null) {
-      await _prefs.remove(_sessionKey);
+      await signOut();
       return null;
     }
-    final user = _toLocalUser(row);
+    final user = _toLocalUser(row, token: token);
     if (user.isDevAdmin && !AppEnv.allowLocalAdminTesting) {
       await signOut();
       return null;
@@ -61,6 +66,152 @@ class AuthRepository {
       email: _adminEmail,
       displayName: 'Development Admin',
       role: AuthRole.admin,
+    );
+  }
+
+  Future<AuthUser> signInWithPortalToken(
+    String token, {
+    String? roleType,
+    Map<String, dynamic>? userData,
+  }) async {
+    final cleanToken = token.trim();
+    if (cleanToken.isEmpty) {
+      throw Exception('Authentication token is missing.');
+    }
+    if (userData == null) {
+      throw Exception('User data is missing.');
+    }
+
+    final email = userData['email']?.toString().trim();
+    if (email == null || email.isEmpty) {
+      throw Exception('The portal user email is missing.');
+    }
+
+    final firstName = userData['first_name']?.toString();
+    final lastName = userData['last_name']?.toString();
+    final profileImage = userData['profile_image']?.toString();
+    final department = userData['department']?.toString() ??
+        userData['sub_department']?.toString();
+
+    String? designationName;
+    final desigRaw = userData['designation'];
+    if (desigRaw is Map) {
+      designationName = desigRaw['designation_name']?.toString() ??
+          desigRaw['description']?.toString() ??
+          desigRaw['name']?.toString();
+    } else if (desigRaw is String) {
+      designationName = desigRaw;
+    }
+    designationName ??= userData['designation_name']?.toString();
+
+    String? orgName;
+    final orgRaw = userData['organization'];
+    if (orgRaw is Map) {
+      orgName = orgRaw['name']?.toString();
+    } else if (orgRaw is String) {
+      orgName = orgRaw;
+    }
+
+    final displayName = (firstName != null &&
+            firstName.trim().isNotEmpty &&
+            lastName != null &&
+            lastName.trim().isNotEmpty)
+        ? '${firstName.trim()} ${lastName.trim()}'
+        : (firstName?.trim().isNotEmpty == true
+            ? firstName!.trim()
+            : (userData['name']?.toString() ?? 'Portal User'));
+
+    final userRoleRaw = userData['user_role'];
+    if (userRoleRaw is! Map) {
+      throw Exception('User role information is missing.');
+    }
+    final normalizedRole =
+        (userRoleRaw['role_type']?.toString().trim() ?? '').toLowerCase();
+    if (normalizedRole.isEmpty) {
+      throw Exception('User role type is missing.');
+    }
+
+    final AuthRole role;
+    if (normalizedRole == 'admin') {
+      role = AuthRole.admin;
+    } else if (normalizedRole == 'employee') {
+      role = AuthRole.user;
+    } else {
+      throw Exception('Unsupported portal role: ${userRoleRaw['role_type']}');
+    }
+
+    final roleStr = role == AuthRole.admin ? 'admin' : 'user';
+    final userDataJsonStr = jsonEncode(userData);
+
+    final portalUuid = userData['uuid']?.toString().trim();
+    final portalId = userData['id']?.toString().trim();
+    final stablePortalId = portalUuid != null && portalUuid.isNotEmpty
+        ? 'portal_$portalUuid'
+        : (portalId != null && portalId.isNotEmpty
+            ? 'portal_$portalId'
+            : null);
+
+    User? existing;
+    if (stablePortalId != null) {
+      existing = await (_db.select(_db.users)
+            ..where((t) => t.id.equals(stablePortalId)))
+          .getSingleOrNull();
+    }
+    existing ??= await (_db.select(_db.users)
+          ..where((t) => t.email.equals(email)))
+        .getSingleOrNull();
+
+    final user = existing ??
+        await _db.into(_db.users).insertReturning(
+              UsersCompanion.insert(
+                id: stablePortalId ?? const Uuid().v4(),
+                email: email,
+                displayName: displayName,
+                createdAt: DateTime.now().toUtc(),
+                authProvider: const Value('portal'),
+                role: Value(roleStr),
+                firstName: Value(firstName),
+                lastName: Value(lastName),
+                profileImage: Value(profileImage),
+                department: Value(department),
+                designation: Value(designationName),
+                organization: Value(orgName),
+                userDataJson: Value(userDataJsonStr),
+              ),
+            );
+
+    await (_db.update(_db.users)..where((t) => t.id.equals(user.id)))
+        .write(UsersCompanion(
+      email: Value(email),
+      role: Value(roleStr),
+      displayName: Value(displayName),
+      firstName: Value(firstName),
+      lastName: Value(lastName),
+      profileImage: Value(profileImage),
+      department: Value(department),
+      designation: Value(designationName),
+      organization: Value(orgName),
+      userDataJson: Value(userDataJsonStr),
+    ));
+
+    await _prefs.setString(_sessionKey, user.id);
+    await _prefs.setString(_tokenKey, cleanToken);
+    await _devices.upsertForUser(localUserId: user.id);
+
+    return AuthUser(
+      id: user.id,
+      email: email,
+      displayName: displayName,
+      token: cleanToken,
+      firstName: firstName,
+      lastName: lastName,
+      profileImage: profileImage,
+      department: department,
+      designation: designationName,
+      organization: orgName,
+      userDataJson: userDataJsonStr,
+      role: role,
+      isLocalDev: false,
     );
   }
 
@@ -97,7 +248,14 @@ class AuthRepository {
   }
 
   Future<void> signOut() async {
+    final userId = _prefs.getString(_sessionKey);
     await _prefs.remove(_sessionKey);
+    await _prefs.remove(_tokenKey);
+    if (userId != null) {
+      await (_db.delete(_db.users)..where((t) => t.id.equals(userId))).go();
+    } else {
+      await _db.delete(_db.users).go();
+    }
   }
 
   Future<void> resetTestAccount() async {
@@ -114,15 +272,25 @@ class AuthRepository {
         .watch();
   }
 
-  AuthUser _toLocalUser(User row) {
+  AuthUser _toLocalUser(User row, {String? token}) {
     final isAdminLocal =
         AppEnv.allowLocalAdminTesting && row.email == _adminEmail;
+    final rowRole = row.role == 'admin' ? AuthRole.admin : AuthRole.user;
+    final role = isAdminLocal ? AuthRole.admin : rowRole;
     return AuthUser(
       id: row.id,
       email: row.email,
       displayName: row.displayName,
+      token: token,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      profileImage: row.profileImage,
+      department: row.department,
+      designation: row.designation,
+      organization: row.organization,
+      userDataJson: row.userDataJson,
       firebaseUid: row.firebaseUid,
-      role: isAdminLocal ? AuthRole.admin : AuthRole.user,
+      role: role,
       isLocalDev: row.authProvider == 'local' ||
           row.email == _devEmail ||
           row.email == _adminEmail,

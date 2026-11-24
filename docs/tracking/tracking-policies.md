@@ -47,9 +47,9 @@ User-configurable exclusion list (process name / app id). While excluded app is 
 
 ## Project / task start rules
 
-- **No default project or default task** is auto-created. User must create both.
-- Tracking segments are always **project + task** (never project-only).
-- **Start Tracking** is enabled only when a task is selected.
+- **No default project or default task** is auto-created. Projects and tasks are now **optional**.
+- Tracking segments can be started with or without a project and task.
+- **Start Tracking** is enabled whenever tracking is stopped or in an error state, regardless of whether a project or task is selected.
 - **Project click** → browse / select project only; **never** starts or switches the timer.
 - **Task click** → always **ask** (“Are you sure you want to start/switch this task?”); on confirm, start if stopped or switch if live (current task segment ends; **Today (all work)** continues).
 - **Mark completed / Delete** → if a timer is open, **ask**; on confirm, **stop first**, then mutate. Never auto-restart after that stop.

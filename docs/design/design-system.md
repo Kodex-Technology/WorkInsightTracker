@@ -3,7 +3,7 @@
 ## Brand
 
 - Display name: **WorkInsight Tracker**
-- Mark: geometric diamond logo (`assets/branding/workinsight_mark.png`)
+- Mark: geometric diamond logo (`assets/branding/workinsight_mark.svg`)
 - In-app: mark + stacked text (`WorkInsight` / `Tracker`)
 - OS chrome (Windows title bar / taskbar): mark-only icon
 - Technical id: `witrack` / `com.witrack.desktop`

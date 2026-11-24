@@ -66,14 +66,12 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     final users = ref.watch(registeredUsersProvider);
     final draft = _draft;
 
-    if (!AppEnv.allowLocalAdminTesting || auth.user?.isDevAdmin != true) {
+    if (auth.user?.isAdmin != true) {
       return Center(
         child: WitrackSurface(
           margin: const EdgeInsets.all(24),
           child: Text(
-            AppEnv.isProduction
-                ? 'Production admin requires a trusted identity provider (deferred).'
-                : 'Local admin testing requires the Development Admin account.',
+            'Admin access required.',
             style: theme.textTheme.bodyLarge,
           ),
         ),

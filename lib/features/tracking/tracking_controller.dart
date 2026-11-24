@@ -135,9 +135,8 @@ class TrackingController extends Notifier<TrackingUiState> {
     );
     final user = ref.read(authControllerProvider).user;
     if (user != null) {
-      final today = await ref
-          .read(sessionRepositoryProvider)
-          .trackedToday(user.id);
+      final today =
+          await ref.read(sessionRepositoryProvider).trackedToday(user.id);
       final workspaceId = await ref
           .read(projectRepositoryProvider)
           .ensureDefaultWorkspace(user.id);
@@ -166,9 +165,8 @@ class TrackingController extends Notifier<TrackingUiState> {
     required String projectId,
     required String projectName,
   }) async {
-    final task = await ref
-        .read(projectRepositoryProvider)
-        .firstOpenTask(projectId);
+    final task =
+        await ref.read(projectRepositoryProvider).firstOpenTask(projectId);
     if (task == null) {
       selectProjectOnly(projectId: projectId, projectName: projectName);
       return;
@@ -210,8 +208,7 @@ class TrackingController extends Notifier<TrackingUiState> {
     bool startIfStopped = true,
   }) async {
     final same = state.projectId == projectId && state.taskId == taskId;
-    final open =
-        state.status == TrackingStatus.tracking ||
+    final open = state.status == TrackingStatus.tracking ||
         state.status == TrackingStatus.idle ||
         state.status == TrackingStatus.paused;
 
@@ -258,9 +255,8 @@ class TrackingController extends Notifier<TrackingUiState> {
       state = state.copyWith(clearTask: true);
       return;
     }
-    final open = await ref
-        .read(projectRepositoryProvider)
-        .listOpenTasks(projectId);
+    final open =
+        await ref.read(projectRepositoryProvider).listOpenTasks(projectId);
     if (open.isEmpty) {
       state = state.copyWith(clearTask: true);
       return;
@@ -292,9 +288,8 @@ class TrackingController extends Notifier<TrackingUiState> {
       return;
     }
     final next = projects.first;
-    final task = await ref
-        .read(projectRepositoryProvider)
-        .firstOpenTask(next.id);
+    final task =
+        await ref.read(projectRepositoryProvider).firstOpenTask(next.id);
     if (task == null) {
       selectProjectOnly(projectId: next.id, projectName: next.name);
       return;
@@ -328,9 +323,7 @@ class TrackingController extends Notifier<TrackingUiState> {
           .read(sessionRepositoryProvider)
           .closeOpenIdleInterval(sessionId: previous, at: now);
       final snap = _clock.snapshotMs();
-      await ref
-          .read(sessionRepositoryProvider)
-          .completeSession(
+      await ref.read(sessionRepositoryProvider).completeSession(
             sessionId: previous,
             activeMs: snap['activeMs']!,
             idleMs: snap['idleMs']!,
@@ -338,14 +331,9 @@ class TrackingController extends Notifier<TrackingUiState> {
           );
     }
 
-    final workspaceId =
-        state.workspaceId ??
-        await ref
-            .read(projectRepositoryProvider)
-            .ensureDefaultWorkspace(user.id);
-    final sessionId = await ref
-        .read(sessionRepositoryProvider)
-        .createSession(
+    final workspaceId = state.workspaceId ??
+        await ref.read(projectRepositoryProvider).ensureDefaultWorkspace(user.id);
+    final sessionId = await ref.read(sessionRepositoryProvider).createSession(
           userId: user.id,
           workspaceId: workspaceId,
           projectId: projectId,
@@ -356,17 +344,15 @@ class TrackingController extends Notifier<TrackingUiState> {
     _totalBuckets = 0;
     _productivityWindowStart = now.toUtc();
     _clock.start(now);
-    final nextStatus =
-        resumeStatus == TrackingStatus.paused ||
+    final nextStatus = resumeStatus == TrackingStatus.paused ||
             resumeStatus == TrackingStatus.idle
         ? resumeStatus
         : TrackingStatus.tracking;
     if (nextStatus != TrackingStatus.tracking) {
       _clock.transition(nextStatus, now);
     }
-    final today = await ref
-        .read(sessionRepositoryProvider)
-        .trackedToday(user.id);
+    final today =
+        await ref.read(sessionRepositoryProvider).trackedToday(user.id);
     state = state.copyWith(
       status: nextStatus,
       sessionId: sessionId,
@@ -401,13 +387,6 @@ class TrackingController extends Notifier<TrackingUiState> {
       state = state.copyWith(errorMessage: 'Sign in required.');
       return;
     }
-    if (state.projectId == null || state.taskId == null) {
-      state = state.copyWith(
-        errorMessage:
-            'Create a project and task, then select the task to start.',
-      );
-      return;
-    }
     if (!state.status.canStart) return;
 
     state = state.copyWith(
@@ -415,15 +394,11 @@ class TrackingController extends Notifier<TrackingUiState> {
       clearError: true,
     );
     try {
-      await _engine.requestPermissions(prompt: true);
-      final workspaceId =
-          state.workspaceId ??
+      final workspaceId = state.workspaceId ??
           await ref
               .read(projectRepositoryProvider)
               .ensureDefaultWorkspace(user.id);
-      final sessionId = await ref
-          .read(sessionRepositoryProvider)
-          .createSession(
+      final sessionId = await ref.read(sessionRepositoryProvider).createSession(
             userId: user.id,
             workspaceId: workspaceId,
             projectId: state.projectId,
@@ -498,9 +473,7 @@ class TrackingController extends Notifier<TrackingUiState> {
           .read(sessionRepositoryProvider)
           .closeOpenIdleInterval(sessionId: sessionId, at: now);
       final snap = _clock.snapshotMs();
-      await ref
-          .read(sessionRepositoryProvider)
-          .completeSession(
+      await ref.read(sessionRepositoryProvider).completeSession(
             sessionId: sessionId,
             activeMs: snap['activeMs']!,
             idleMs: snap['idleMs']!,
@@ -508,9 +481,8 @@ class TrackingController extends Notifier<TrackingUiState> {
           );
       final user = ref.read(authControllerProvider).user;
       if (user != null) {
-        final today = await ref
-            .read(sessionRepositoryProvider)
-            .trackedToday(user.id);
+        final today =
+            await ref.read(sessionRepositoryProvider).trackedToday(user.id);
         state = state.copyWith(todayTracked: today);
       }
     }
@@ -606,9 +578,7 @@ class TrackingController extends Notifier<TrackingUiState> {
           lastScreenshotAt: last.toLocal(),
           activityPercent: productivity.percent,
         );
-        await ref
-            .read(sessionRepositoryProvider)
-            .addEvent(
+        await ref.read(sessionRepositoryProvider).addEvent(
               sessionId: sessionId,
               type: isTest ? 'screenshot_test' : 'screenshot',
               payload:
@@ -637,9 +607,10 @@ class TrackingController extends Notifier<TrackingUiState> {
     if (event.status == TrackingStatus.idle &&
         previous != TrackingStatus.idle) {
       unawaited(
-        ref
-            .read(sessionRepositoryProvider)
-            .openIdleInterval(sessionId: _sessionId!, at: event.at),
+        ref.read(sessionRepositoryProvider).openIdleInterval(
+              sessionId: _sessionId!,
+              at: event.at,
+            ),
       );
       // Fire from the status source of truth (not UI listen) so idle toasts
       // always show when the session actually becomes Idle.
@@ -653,16 +624,18 @@ class TrackingController extends Notifier<TrackingUiState> {
     if (previous == TrackingStatus.idle &&
         event.status == TrackingStatus.tracking) {
       unawaited(
-        ref
-            .read(sessionRepositoryProvider)
-            .closeOpenIdleInterval(sessionId: _sessionId!, at: event.at),
+        ref.read(sessionRepositoryProvider).closeOpenIdleInterval(
+              sessionId: _sessionId!,
+              at: event.at,
+            ),
       );
     }
 
     unawaited(
-      ref
-          .read(sessionRepositoryProvider)
-          .updateState(sessionId: _sessionId!, state: event.status.name),
+      ref.read(sessionRepositoryProvider).updateState(
+            sessionId: _sessionId!,
+            state: event.status.name,
+          ),
     );
     unawaited(_persistDurations());
 
@@ -677,9 +650,8 @@ class TrackingController extends Notifier<TrackingUiState> {
     if (_sessionId == null) return;
     _totalBuckets += 1;
     if (event.isActiveSignal) _activeBuckets += 1;
-    final percent = _totalBuckets == 0
-        ? 0.0
-        : (_activeBuckets / _totalBuckets) * 100.0;
+    final percent =
+        _totalBuckets == 0 ? 0.0 : (_activeBuckets / _totalBuckets) * 100.0;
     state = state.copyWith(
       secondsSinceLastInput: event.secondsSinceLastInput,
       isActiveSignal: event.isActiveSignal,
@@ -687,9 +659,7 @@ class TrackingController extends Notifier<TrackingUiState> {
       activityPercent: percent,
     );
     unawaited(
-      ref
-          .read(sessionRepositoryProvider)
-          .addActivitySample(
+      ref.read(sessionRepositoryProvider).addActivitySample(
             sessionId: _sessionId!,
             sampledAt: event.sampledAt,
             secondsSinceLastInput: event.secondsSinceLastInput,
@@ -703,9 +673,7 @@ class TrackingController extends Notifier<TrackingUiState> {
     if (_sessionId == null) return;
     state = state.copyWith(currentApp: event.appName);
     unawaited(
-      ref
-          .read(sessionRepositoryProvider)
-          .openAppUsage(
+      ref.read(sessionRepositoryProvider).openAppUsage(
             sessionId: _sessionId!,
             appName: event.appName,
             exeName: event.exeName,
@@ -713,9 +681,7 @@ class TrackingController extends Notifier<TrackingUiState> {
           ),
     );
     unawaited(
-      ref
-          .read(sessionRepositoryProvider)
-          .addEvent(
+      ref.read(sessionRepositoryProvider).addEvent(
             sessionId: _sessionId!,
             type: 'foreground',
             payload: event.appName,
@@ -763,9 +729,7 @@ class TrackingController extends Notifier<TrackingUiState> {
     final sessionId = _sessionId;
     if (sessionId == null) return;
     final snap = _clock.snapshotMs();
-    await ref
-        .read(sessionRepositoryProvider)
-        .updateDurations(
+    await ref.read(sessionRepositoryProvider).updateDurations(
           sessionId: sessionId,
           activeMs: snap['activeMs']!,
           idleMs: snap['idleMs']!,
@@ -791,5 +755,5 @@ class TrackingController extends Notifier<TrackingUiState> {
 
 final trackingControllerProvider =
     NotifierProvider<TrackingController, TrackingUiState>(
-      TrackingController.new,
-    );
+  TrackingController.new,
+);

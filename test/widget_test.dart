@@ -36,6 +36,6 @@ void main() {
     expect(find.text(AppConstants.brandPrimary), findsWidgets);
     await tester.pump(AppConstants.splashDuration);
     await tester.pumpAndSettle();
-    expect(find.text('Continue as developer'), findsOneWidget);
+    expect(find.text('Login With Portal'), findsOneWidget);
   });
 }
