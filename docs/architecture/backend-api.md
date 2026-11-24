@@ -159,6 +159,18 @@ Upload body: encrypted bytes only. Server never needs plaintext pixels if client
 
 ## Policies
 
+### Tracker settings (implemented in Laravel backend)
+
+`GET /api/tracker/settings` requires `auth:api` and returns settings for the authenticated user's organization. `PUT /api/tracker/settings` requires an active organization admin and saves to `tracker_organization_preferences`, scoped to that admin's organization. All signed-in users in the organization load the same policy. Desktop clients refresh the policy periodically while tracking.
+
+### Desktop tracker events (implemented)
+
+- `POST /api/tracker/attendance` requires `auth:api` and records the authenticated user's check-in at Start and check-out at Stop.
+- `POST /api/tracker/screenshots` requires `auth:api` and accepts a PNG plus session/display/time metadata. Laravel stores the file on its private local disk and the row in `tracker_screenshots`. The Windows capture engine and ScreenIO integration remain separate; S3 is not used by this path.
+- The desktop keeps its encrypted local screenshot copy. A server upload error is logged and does not stop the local tracking session.
+
+Attendance interval sync uses `POST /api/tracker/attendance` with the ScreenIO-compatible `{ id, employmentId, from, to, note, projectId }` shape at Start, each organization-configured interval, and Stop. `from` and `to` are Unix seconds; Laravel interprets them in `Asia/Karachi`, excludes Normal or removed accounts, applies shift selection, and updates check-in/check-out on the matching tracker attendance row. Start sends `to == from`; later requests update the same UUID with the current `to`.
+
 ### `GET /v1/policies`
 
 ```json

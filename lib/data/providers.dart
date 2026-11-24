@@ -6,6 +6,7 @@ import 'package:witrack/data/projects/project_repository.dart';
 import 'package:witrack/data/screenshots/screenshot_store.dart';
 import 'package:witrack/data/settings/settings_repository.dart';
 import 'package:witrack/data/tracking/session_repository.dart';
+import 'package:witrack/data/tracking/tracker_api_controller.dart';
 import 'package:witrack/platform/method_channel_tracking_engine.dart';
 import 'package:witrack/platform/tracking_engine.dart';
 
@@ -46,4 +47,8 @@ final trackingEngineProvider = Provider<TrackingEngine>((ref) {
   final engine = MethodChannelTrackingEngine();
   ref.onDispose(engine.dispose);
   return engine;
+});
+
+final trackerApiControllerProvider = Provider<TrackerApiController>((ref) {
+  return TrackerApiController();
 });

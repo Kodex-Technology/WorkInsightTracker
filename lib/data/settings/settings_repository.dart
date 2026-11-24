@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+import 'package:witrack/core/config/app_env.dart';
 import 'package:witrack/data/database/app_database.dart';
 
 class TrackingSettings {
@@ -54,6 +58,76 @@ class SettingsRepository {
   SettingsRepository(this._db);
 
   final AppDatabase _db;
+
+  Future<void> saveRemote(
+    TrackingSettings settings, {
+    required String token,
+  }) async {
+    final response = await http.put(
+      _settingsUri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'screenshot_enabled': settings.screenshotEnabled,
+        'screenshot_interval_minutes': settings.screenshotIntervalMinutes,
+        'idle_threshold_minutes': settings.idleThresholdMinutes,
+        'auto_pause_on_idle': settings.autoPauseOnIdle,
+        'exclude_idle_from_active': settings.excludeIdleFromActive,
+        'collect_window_titles': settings.collectWindowTitles,
+        'notify_on_screenshot': settings.notifyOnScreenshot,
+      }),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('Server rejected preferences (HTTP ${response.statusCode}): ${response.body}');
+    }
+  }
+
+  Uri get _settingsUri {
+    final base = Uri.parse(AppEnv.apiBaseUrl);
+    final normalized = base.path.endsWith('/') ? base : base.replace(path: '${base.path}/');
+    final path = normalized.path.endsWith('/api/')
+        ? '${normalized.path}tracker/settings'
+        : '${normalized.path}api/tracker/settings';
+    return normalized.replace(path: path);
+  }
+
+  Future<TrackingSettings?> loadRemote({required String token}) async {
+    final response = await http.get(
+      _settingsUri,
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 404) return null;
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('Could not load server preferences (HTTP ${response.statusCode}).');
+    }
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map || decoded['data'] is! Map) return null;
+    final data = Map<String, dynamic>.from(decoded['data'] as Map);
+    bool boolean(String key, bool fallback) {
+      final value = data[key];
+      if (value is bool) return value;
+      if (value is num) return value != 0;
+      if (value is String) {
+        final normalized = value.toLowerCase();
+        if (normalized == 'true' || normalized == '1') return true;
+        if (normalized == 'false' || normalized == '0') return false;
+      }
+      return fallback;
+    }
+    int integer(String key, int fallback) => int.tryParse('${data[key]}') ?? fallback;
+    return TrackingSettings(
+      screenshotEnabled: boolean('screenshot_enabled', true),
+      screenshotIntervalMinutes: integer('screenshot_interval_minutes', 10),
+      idleThresholdMinutes: integer('idle_threshold_minutes', 5),
+      autoPauseOnIdle: boolean('auto_pause_on_idle', false),
+      excludeIdleFromActive: boolean('exclude_idle_from_active', true),
+      collectWindowTitles: boolean('collect_window_titles', false),
+      notifyOnScreenshot: boolean('notify_on_screenshot', true),
+    );
+  }
 
   Future<TrackingSettings> load() async {
     final rows = await _db.select(_db.appSettings).get();

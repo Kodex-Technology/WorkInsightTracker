@@ -19,26 +19,7 @@ class AppShell extends ConsumerWidget {
 
   final Widget child;
 
-  static List<_NavItem> _mainNavFor(
-    FeatureToggleState flags, {
-    required bool isAdmin,
-  }) {
-    if (isAdmin) {
-      // Admin: no personal tracking surfaces.
-      return [
-        const _NavItem(
-          'Admin',
-          Icons.admin_panel_settings_outlined,
-          '/app/admin',
-        ),
-        if (flags.isOn(FeatureId.screenshots))
-          const _NavItem(
-            'Screenshots',
-            Icons.photo_library_outlined,
-            '/app/screenshots',
-          ),
-      ];
-    }
+  static List<_NavItem> _mainNavFor(FeatureToggleState flags) {
     return [
       const _NavItem('Dashboard', Icons.grid_view_rounded, '/app/dashboard'),
       // Timeline route/screen kept; tab intentionally omitted from nav.
@@ -58,9 +39,6 @@ class AppShell extends ConsumerWidget {
     ];
   }
 
-  static const _manageNav = <_NavItem>[
-    _NavItem('Settings', Icons.tune_rounded, '/app/settings'),
-  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -75,10 +53,8 @@ class AppShell extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final width = collapsed ? 72.0 : 224.0;
     final flags = ref.watch(featureTogglesProvider);
-    final isAdmin = auth.user?.isAdmin == true;
-    final mainNav = _mainNavFor(flags, isAdmin: isAdmin);
+    final mainNav = _mainNavFor(flags);
     final title = _titleFor(location, mainNav);
-    final showAdmin = isAdmin;
 
     return Scaffold(
       body: Row(
@@ -125,24 +101,6 @@ class AppShell extends ConsumerWidget {
                           collapsed: collapsed,
                           onTap: () => context.go(item.path),
                         ),
-                      if (isAdmin) ...[
-                        const SizedBox(height: 12),
-                        if (!collapsed)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-                            child: Text(
-                              'MANAGE',
-                              style: theme.textTheme.labelSmall,
-                            ),
-                          ),
-                        for (final item in _manageNav)
-                          _NavTile(
-                            item: item,
-                            selected: location.startsWith(item.path),
-                            collapsed: collapsed,
-                            onTap: () => context.go(item.path),
-                          ),
-                      ],
                     ],
                   ),
                 ),
@@ -352,7 +310,7 @@ class AppShell extends ConsumerWidget {
   }
 
   String _titleFor(String location, List<_NavItem> mainNav) {
-    for (final item in [...mainNav, ..._manageNav]) {
+    for (final item in mainNav) {
       if (location.startsWith(item.path)) return item.label;
     }
     return AppConstants.appName;
