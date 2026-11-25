@@ -10,9 +10,12 @@
 
 ```bash
 cd /path/to/WItrack
+cp .env.example .env
 flutter pub get
 flutter run -d windows
 ```
+
+Set `API_BASE_URL` in `.env` to the Laravel API server. Production builds use `.env.production`; see [windows-build.md](windows-build.md).
 
 ## Analysis & tests
 

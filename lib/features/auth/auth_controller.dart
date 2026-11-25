@@ -83,9 +83,8 @@ class AuthController extends Notifier<AuthState> {
   Future<void> signInWithPortal() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final url = '${AppEnv.apiBaseUrl}tracker/generate-token';
       final response = await http.post(
-        Uri.parse(url),
+        AppEnv.apiUri('tracker/generate-token'),
         headers: {'Content-Type': 'application/json'},
       );
 

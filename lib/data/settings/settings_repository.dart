@@ -86,12 +86,7 @@ class SettingsRepository {
   }
 
   Uri get _settingsUri {
-    final base = Uri.parse(AppEnv.apiBaseUrl);
-    final normalized = base.path.endsWith('/') ? base : base.replace(path: '${base.path}/');
-    final path = normalized.path.endsWith('/api/')
-        ? '${normalized.path}tracker/settings'
-        : '${normalized.path}api/tracker/settings';
-    return normalized.replace(path: path);
+    return AppEnv.apiUri('tracker/settings');
   }
 
   Future<TrackingSettings?> loadRemote({required String token}) async {

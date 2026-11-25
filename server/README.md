@@ -3,8 +3,8 @@
 Trusted Firebase Admin SDK server for privileged auth operations.
 
 ```bash
-cp ../.env.server.example .env
-# Set FIREBASE_PROJECT_ID + GOOGLE_APPLICATION_CREDENTIALS
+# Configure FIREBASE_PROJECT_ID, GOOGLE_APPLICATION_CREDENTIALS,
+# PORT, and ADMIN_PORTAL_ORIGIN in your shell or deployment environment.
 npm install
 npm start
 npm test

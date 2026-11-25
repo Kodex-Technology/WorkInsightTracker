@@ -24,6 +24,8 @@ Thumbs.db
 .env.local
 .env.development
 .env.production
+.env.production.local
+!.env.production
 .env.server
 config/dev.json
 config/prod.json

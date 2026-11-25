@@ -7,13 +7,6 @@ import 'package:witrack/data/auth/auth_models.dart';
 
 /// HTTP integration for attendance and screenshots; native capture stays local.
 class TrackerApiController {
-  Uri get _base {
-    final uri = Uri.parse(AppEnv.apiBaseUrl);
-    if (uri.path.endsWith('/api/')) return uri;
-    if (uri.path.endsWith('/api')) return uri.replace(path: '${uri.path}/');
-    return uri.replace(path: '${uri.path.replaceFirst(RegExp(r'/$'), '')}/api');
-  }
-
   Map<String, String> _headers(AuthUser user) => {
         'Accept': 'application/json',
         if (user.token?.isNotEmpty == true)
@@ -53,7 +46,7 @@ class TrackerApiController {
       'note': note ?? '',
       'projectId': projectId,
     };
-    final uri = _base.resolve('tracker/attendance');
+    final uri = AppEnv.apiUri('tracker/attendance');
     // ignore: avoid_print
     print('[witrack.attendance] POST $uri (${endedAt.isAtSameMomentAs(startedAt) ? 'check-in' : 'attendance update/check-out'})');
     final response = await http.post(
@@ -105,7 +98,7 @@ class TrackerApiController {
     if (user.token?.isNotEmpty != true ) return;
     final request = http.MultipartRequest(
       'POST',
-      _base.resolve('tracker/screenshots'),
+      AppEnv.apiUri('tracker/screenshots'),
     )..headers.addAll(_headers(user));
     request.fields.addAll({
       'session_id': sessionId,

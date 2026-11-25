@@ -12,7 +12,7 @@ try {
 } catch (e) {
   console.error('Firebase Admin init failed:', e.message);
   console.error(
-    'Set GOOGLE_APPLICATION_CREDENTIALS and FIREBASE_PROJECT_ID (see .env.server.example).',
+    'Set GOOGLE_APPLICATION_CREDENTIALS and FIREBASE_PROJECT_ID in the server environment.',
   );
   process.exit(1);
 }
