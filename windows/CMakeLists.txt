@@ -75,9 +75,12 @@ set(INSTALL_BUNDLE_LIB_DIR "${CMAKE_INSTALL_PREFIX}")
 install(TARGETS ${BINARY_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
   COMPONENT Runtime)
 
-# Desktop runtime configuration is read from beside the executable.
-install(FILES "${CMAKE_SOURCE_DIR}/.env.production"
-  DESTINATION "${CMAKE_INSTALL_PREFIX}" COMPONENT Runtime)
+# Desktop runtime configuration is read from beside the executable when the
+# production environment file is included in the checkout.
+if(EXISTS "${CMAKE_SOURCE_DIR}/.env.production")
+  install(FILES "${CMAKE_SOURCE_DIR}/.env.production"
+    DESTINATION "${CMAKE_INSTALL_PREFIX}" COMPONENT Runtime)
+endif()
 
 install(FILES "${FLUTTER_ICU_DATA_FILE}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   COMPONENT Runtime)
