@@ -154,6 +154,9 @@ class Screenshots extends Table {
   BoolColumn get isTestCapture => boolean().withDefault(const Constant(false))();
   /// Extensible JSON bag for future backend/sync fields — never required to read.
   TextColumn get metadataJson => text().nullable()();
+  TextColumn get uploadStatus => text().nullable()();
+  TextColumn get s3ObjectKey => text().nullable()();
+  DateTimeColumn get uploadedAt => dateTime().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -221,7 +224,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -270,6 +273,11 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(users, users.designation);
             await m.addColumn(users, users.organization);
             await m.addColumn(users, users.userDataJson);
+          }
+          if (from < 7) {
+            await m.addColumn(screenshots, screenshots.uploadStatus);
+            await m.addColumn(screenshots, screenshots.s3ObjectKey);
+            await m.addColumn(screenshots, screenshots.uploadedAt);
           }
         },
       );

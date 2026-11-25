@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:witrack/data/auth/auth_models.dart';
 import 'package:witrack/data/providers.dart';
+import 'package:witrack/data/screenshots/screenshot_store.dart';
 import 'package:witrack/data/settings/settings_repository.dart';
 import 'package:witrack/domain/tracking/session_clock.dart';
 import 'package:witrack/domain/tracking/tracking_state.dart';
@@ -147,6 +149,43 @@ class TrackingController extends Notifier<TrackingUiState> {
           .read(projectRepositoryProvider)
           .ensureDefaultWorkspace(user.id);
       state = state.copyWith(todayTracked: today, workspaceId: workspaceId);
+      unawaited(_processPendingUploads(user));
+    }
+  }
+
+  Future<void> _processPendingUploads(AuthUser user) async {
+    try {
+      final store = ref.read(screenshotStoreProvider);
+      final pending = await store.getPendingUploads();
+      for (final row in pending) {
+        if (row.isTestCapture) continue;
+        try {
+          final objectKey = await ref.read(trackerApiControllerProvider).uploadScreenshotToS3(
+                user: user,
+                screenshotId: row.id,
+                sessionId: row.sessionId,
+                takenAt: row.takenAt,
+                takenDay: row.takenDay ?? ScreenshotStore.dayKey(row.takenAt.toLocal()),
+                filePath: row.filePath,
+              );
+          if (objectKey != null) {
+            await store.updateUploadStatus(
+              id: row.id,
+              status: 'uploaded',
+              s3ObjectKey: objectKey,
+              uploadedAt: DateTime.now().toUtc(),
+            );
+          }
+        } catch (e) {
+          developer.log('Pending screenshot S3 upload failed for ${row.id}: $e', name: 'witrack.screenshots');
+          await store.updateUploadStatus(
+            id: row.id,
+            status: 'failed',
+          );
+        }
+      }
+    } catch (e) {
+      developer.log('Error processing pending screenshot uploads: $e', name: 'witrack.screenshots');
     }
   }
 
@@ -728,18 +767,33 @@ class TrackingController extends Notifier<TrackingUiState> {
           },
         );
         final authUser = ref.read(authControllerProvider).user;
-        if (authUser != null) {
-          try {
-            await ref.read(trackerApiControllerProvider).uploadScreenshot(
-                  user: authUser,
-                  pngBytes: image.pngBytes,
-                  sessionId: sessionId,
-                  displayIndex: image.displayIndex,
-                  takenAt: row.takenAt,
+        if (authUser != null && !isTest) {
+          unawaited(() async {
+            try {
+              final objectKey = await ref.read(trackerApiControllerProvider).uploadScreenshotToS3(
+                    user: authUser,
+                    screenshotId: row.id,
+                    sessionId: sessionId,
+                    takenAt: row.takenAt,
+                    takenDay: row.takenDay ?? ScreenshotStore.dayKey(row.takenAt.toLocal()),
+                    filePath: row.filePath,
+                  );
+              if (objectKey != null) {
+                await store.updateUploadStatus(
+                  id: row.id,
+                  status: 'uploaded',
+                  s3ObjectKey: objectKey,
+                  uploadedAt: DateTime.now().toUtc(),
                 );
-          } catch (apiError) {
-            developer.log('Screenshot API upload failed: $apiError', name: 'witrack.screenshots');
-          }
+              }
+            } catch (apiError) {
+              developer.log('Screenshot S3 upload failed: $apiError', name: 'witrack.screenshots');
+              await store.updateUploadStatus(
+                id: row.id,
+                status: 'failed',
+              );
+            }
+          }());
         }
         last = row.takenAt;
       }

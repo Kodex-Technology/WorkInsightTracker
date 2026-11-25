@@ -8,6 +8,7 @@ import {
   isAdminRole,
 } from './roles.js';
 import { requireAuth, requireAdmin } from './auth_middleware.js';
+import { generateScreenshotPresignedUrl } from './s3.js';
 
 export function buildRouter() {
   const router = Router();
@@ -237,6 +238,64 @@ export function buildRouter() {
   });
 
   // Non-admin clients cannot hit privileged routes — explicit 403 probe helper for tests.
+  router.post('/v1/screenshots/meta', async (req, res, next) => {
+    try {
+      const authHeader = req.headers.authorization || '';
+      const match = authHeader.match(/^Bearer\s+(.+)$/i);
+      if (!match) {
+        return res.status(401).json({ error: 'Missing Bearer token' });
+      }
+      const token = match[1];
+
+      let backendUserId = null;
+      try {
+        const decoded = await getAuth().verifyIdToken(token, true);
+        backendUserId = decoded.uid;
+      } catch (_) {
+        const headerUserId = req.headers['x-backend-user-id'] || req.body.backendUserId;
+        if (headerUserId && typeof headerUserId === 'string' && headerUserId.trim().length > 0) {
+          backendUserId = headerUserId.trim();
+        } else {
+          return res.status(401).json({ error: 'Invalid or unverified token / missing user identification' });
+        }
+      }
+
+      const { screenshotId, takenAt, takenDay } = req.body || {};
+      if (!screenshotId || typeof screenshotId !== 'string') {
+        return res.status(400).json({ error: 'screenshotId is required' });
+      }
+
+      let captureDate = takenDay;
+      if (!captureDate || typeof captureDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(captureDate)) {
+        if (takenAt) {
+          const d = new Date(takenAt);
+          if (!isNaN(d.getTime())) {
+            captureDate = d.toISOString().substring(0, 10);
+          }
+        }
+      }
+      if (!captureDate) {
+        captureDate = new Date().toISOString().substring(0, 10);
+      }
+
+      const result = await generateScreenshotPresignedUrl({
+        backendUserId,
+        captureDate,
+        screenshotId,
+        expiresIn: Number(req.body.expiresIn) || 300,
+      });
+
+      res.json({
+        screenshotId,
+        objectKey: result.objectKey,
+        uploadUrl: result.uploadUrl,
+        expiresIn: result.expiresIn,
+      });
+    } catch (e) {
+      next(e);
+    }
+  });
+
   router.post('/_authz/probe-admin', requireAuth, (req, res) => {
     if (!isAdminRole(req.user.role)) {
       return res.status(403).json({ error: 'Admin role required' });

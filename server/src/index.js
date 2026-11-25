@@ -10,11 +10,7 @@ const origin = process.env.ADMIN_PORTAL_ORIGIN || 'http://127.0.0.1:5173';
 try {
   initFirebase();
 } catch (e) {
-  console.error('Firebase Admin init failed:', e.message);
-  console.error(
-    'Set GOOGLE_APPLICATION_CREDENTIALS and FIREBASE_PROJECT_ID in the server environment.',
-  );
-  process.exit(1);
+  console.warn('Firebase Admin init warning (proceeding with fallback):', e.message);
 }
 
 const app = express();

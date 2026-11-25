@@ -290,4 +290,29 @@ class ScreenshotStore {
     }
     await (_db.delete(_db.screenshots)..where((t) => t.id.equals(id))).go();
   }
+
+  Future<void> updateUploadStatus({
+    required String id,
+    required String status,
+    String? s3ObjectKey,
+    DateTime? uploadedAt,
+  }) async {
+    await (_db.update(_db.screenshots)..where((t) => t.id.equals(id))).write(
+      ScreenshotsCompanion(
+        uploadStatus: Value(status),
+        s3ObjectKey: s3ObjectKey != null ? Value(s3ObjectKey) : const Value.absent(),
+        uploadedAt: uploadedAt != null ? Value(uploadedAt) : const Value.absent(),
+      ),
+    );
+  }
+
+  Future<List<Screenshot>> getPendingUploads() async {
+    return (_db.select(_db.screenshots)
+          ..where((t) =>
+              t.isTestCapture.equals(false) &
+              (t.uploadStatus.isNull() |
+                  t.uploadStatus.equals('pending') |
+                  t.uploadStatus.equals('failed'))))
+        .get();
+  }
 }

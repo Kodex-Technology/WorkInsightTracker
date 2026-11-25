@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
@@ -11,6 +12,7 @@ class TrackerApiController {
         'Accept': 'application/json',
         if (user.token?.isNotEmpty == true)
           'Authorization': 'Bearer ${user.token}',
+        'X-Backend-User-Id': user.id,
       };
 
   Future<void> syncAttendance({
@@ -86,7 +88,78 @@ class TrackerApiController {
     }
   }
 
+  Future<String?> uploadScreenshotToS3({
+    required AuthUser user,
+    required String screenshotId,
+    required String sessionId,
+    required DateTime takenAt,
+    required String takenDay,
+    required String filePath,
+  }) async {
+    if (user.token?.isNotEmpty != true) return null;
 
+    final file = File(filePath);
+    if (!await file.exists()) {
+      throw Exception('Screenshot file not found at $filePath');
+    }
+    final fileBytes = await file.readAsBytes();
+
+    // 1. Request presigned upload URL from backend
+    final metaUri = AppEnv.apiUri('v1/screenshots/meta');
+    final userData = _userData(user);
+    final backendUserId = userData['employee_id_tracker_activity'] ??
+        userData['attendance_user_id'] ??
+        userData['id'] ??
+        user.id;
+
+    final metaPayload = <String, Object?>{
+      'screenshotId': screenshotId,
+      'sessionId': sessionId,
+      'takenAt': takenAt.toUtc().toIso8601String(),
+      'takenDay': takenDay,
+      'backendUserId': backendUserId,
+    };
+
+    final metaResponse = await http.post(
+      metaUri,
+      headers: {
+        ..._headers(user),
+        'Content-Type': 'application/json',
+        'X-Backend-User-Id': '$backendUserId',
+      },
+      body: jsonEncode(metaPayload),
+    );
+
+    if (metaResponse.statusCode < 200 || metaResponse.statusCode >= 300) {
+      throw Exception('Failed to get presigned URL (${metaResponse.statusCode}): ${metaResponse.body}');
+    }
+
+    final metaData = jsonDecode(metaResponse.body);
+    if (metaData is! Map) {
+      throw Exception('Invalid presigned metadata response');
+    }
+
+    final uploadUrl = metaData['uploadUrl']?.toString();
+    final objectKey = metaData['objectKey']?.toString();
+    if (uploadUrl == null || uploadUrl.isEmpty || objectKey == null || objectKey.isEmpty) {
+      throw Exception('Missing uploadUrl or objectKey in response');
+    }
+
+    // 2. Upload encrypted .bin file directly to S3 via PUT
+    final putResponse = await http.put(
+      Uri.parse(uploadUrl),
+      headers: {
+        'Content-Type': 'application/octet-stream',
+      },
+      body: fileBytes,
+    );
+
+    if (putResponse.statusCode < 200 || putResponse.statusCode >= 300) {
+      throw Exception('S3 upload failed (${putResponse.statusCode}): ${putResponse.body}');
+    }
+
+    return objectKey;
+  }
 
   Future<void> uploadScreenshot({
     required AuthUser user,

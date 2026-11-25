@@ -75,10 +75,20 @@ set(INSTALL_BUNDLE_LIB_DIR "${CMAKE_INSTALL_PREFIX}")
 install(TARGETS ${BINARY_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
   COMPONENT Runtime)
 
+<<<<<<< Updated upstream
 # Desktop runtime configuration is read from beside the executable when the
 # production environment file is included in the checkout.
 if(EXISTS "${CMAKE_SOURCE_DIR}/.env.production")
   install(FILES "${CMAKE_SOURCE_DIR}/.env.production"
+=======
+# Desktop runtime configuration is read from beside the executable.
+if(EXISTS "${CMAKE_SOURCE_DIR}/../.env.production")
+  install(FILES "${CMAKE_SOURCE_DIR}/../.env.production"
+    DESTINATION "${CMAKE_INSTALL_PREFIX}" COMPONENT Runtime)
+endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/../.env")
+  install(FILES "${CMAKE_SOURCE_DIR}/../.env"
+>>>>>>> Stashed changes
     DESTINATION "${CMAKE_INSTALL_PREFIX}" COMPONENT Runtime)
 endif()
 
