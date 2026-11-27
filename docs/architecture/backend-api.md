@@ -134,7 +134,7 @@ Returns same shape for dashboard/calendar rebuild on another device.
 
 ## Screenshots (optional)
 
-### `POST /v1/screenshots/meta` then upload blob
+### `POST /v1/screenshots/meta` then upload screenshot bytes
 
 ```json
 {
@@ -155,9 +155,26 @@ Returns same shape for dashboard/calendar rebuild on another device.
 → { "uploadUrl": "https://…signed…", "id": "shot_…" }
 ```
 
-Upload body: encrypted bytes only. Server never needs plaintext pixels if client encrypts with org key.
+Screenshot uploads use the authenticated Laravel endpoint `POST /api/tracker/screenshots/s3` as multipart form data. Laravel writes to private S3 at `tracker-screenshots/YYYY-MM-DD/{user_id}/{uuid}.png` with server-side AES-256 encryption and stores the object key in `tracker_screenshots`. The desktop never receives S3 credentials or a signing service URL.
+
+### `GET /v1/screenshots/url`
+
+The Node signing service is not used by the desktop screenshot flow. Laravel `GET /api/tracker/screenshots` returns each authenticated user's row with a 10-minute signed S3 `url`; S3 decrypts server-side encrypted objects when serving that URL.
 
 ## Policies
+
+### Tracker settings (implemented in Laravel backend)
+
+`GET /api/tracker/settings` requires `auth:api` and returns settings for the authenticated user's organization. `PUT /api/tracker/settings` requires an active organization admin and saves to `tracker_organization_preferences`, scoped to that admin's organization. All signed-in users in the organization load the same policy. Desktop clients refresh the policy periodically while tracking.
+
+### Desktop tracker events (implemented)
+
+- `POST /api/tracker/attendance` requires `auth:api` and records the authenticated user's check-in at Start and check-out at Stop.
+- `POST /api/tracker/screenshots/s3` requires `auth:api`, accepts a PNG plus screenshot/session/display/time metadata, derives date and user folder names from trusted server data, uploads to private S3 with AES-256 server-side encryption, and stores its object key in `tracker_screenshots`.
+- `GET /api/tracker/screenshots` returns only the authenticated user's rows and adds 10-minute signed S3 GET URLs. The desktop uses only `API_BASE_URL`; S3 credentials and signing remain on Laravel.
+- Automatic interval captures and manual test captures use this API. New screenshots keep local metadata for tracking/productivity but their image bytes are not persisted on desktop. Previously queued locally encrypted captures can still retry through the same backend upload API.
+
+Attendance interval sync uses `POST /api/tracker/attendance` with the ScreenIO-compatible `{ id, employmentId, from, to, note, projectId }` shape at Start, each organization-configured interval, and Stop. `from` and `to` are Unix seconds; Laravel interprets them in `Asia/Karachi`, excludes Normal or removed accounts, applies shift selection, and updates check-in/check-out on the matching tracker attendance row. Start sends `to == from`; later requests update the same UUID with the current `to`.
 
 ### `GET /v1/policies`
 

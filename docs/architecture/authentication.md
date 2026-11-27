@@ -2,7 +2,7 @@
 
 ## Current (active)
 
-Compile-time: `--dart-define=WITRACK_ENV=development|production` (`AppEnv`).
+Runtime mode and API endpoint are loaded from `.env` for development and `.env.production` for production. Production builds select the file with `--dart-define=APP_ENV=production` (`AppEnv`).
 
 | Mode | Local dev login | Local admin testing | Google / Firebase |
 |---|---|---|---|

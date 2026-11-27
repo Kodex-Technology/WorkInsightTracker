@@ -11,7 +11,11 @@ import 'package:uuid/uuid.dart';
 import 'package:witrack/data/database/app_database.dart';
 
 class ScreenshotFilter {
-  const ScreenshotFilter({this.day, this.projectId, this.taskId});
+  const ScreenshotFilter({
+    this.day,
+    this.projectId,
+    this.taskId,
+  });
 
   /// Local calendar day `yyyy-MM-dd`. Null = all days.
   final String? day;
@@ -36,7 +40,7 @@ class ScreenshotFilter {
 
 class ScreenshotStore {
   ScreenshotStore(this._db, {FlutterSecureStorage? storage})
-    : _storage = storage ?? const FlutterSecureStorage();
+      : _storage = storage ?? const FlutterSecureStorage();
 
   final AppDatabase _db;
   final FlutterSecureStorage _storage;
@@ -61,23 +65,6 @@ class ScreenshotStore {
   }
 
   File _keyFile(Directory dir) => File(p.join(dir.path, _keyFileName));
-
-  Future<void> _safeSecureWrite(String value) async {
-    try {
-      await _storage.write(key: _secureKeyName, value: value);
-    } catch (_) {
-      // Some macOS debug/profile setups can miss keychain entitlements.
-      // Keep the on-disk key as the source of truth instead of failing capture.
-    }
-  }
-
-  Future<String?> _safeSecureRead() async {
-    try {
-      return await _storage.read(key: _secureKeyName);
-    } catch (_) {
-      return null;
-    }
-  }
 
   /// Stable key: prefer on-disk file (survives secure-storage wipe), then
   /// migrate from secure storage, else create once. Never race-regenerate.
@@ -114,20 +101,20 @@ class ScreenshotStore {
       final raw = (await candidate.readAsString()).trim();
       if (raw.isEmpty) continue;
       await file.writeAsString(raw, flush: true);
-      await _safeSecureWrite(raw);
+      await _storage.write(key: _secureKeyName, value: raw);
       return enc.Key.fromBase64(raw);
     }
 
     if (await file.exists()) {
       final raw = (await file.readAsString()).trim();
       if (raw.isNotEmpty) {
-        await _safeSecureWrite(raw);
+        await _storage.write(key: _secureKeyName, value: raw);
         return enc.Key.fromBase64(raw);
       }
     }
 
     // 2) Flutter secure storage for the *current* support path.
-    final fromSecure = await _safeSecureRead();
+    final fromSecure = await _storage.read(key: _secureKeyName);
     if (fromSecure != null && fromSecure.isNotEmpty) {
       await file.writeAsString(fromSecure, flush: true);
       return enc.Key.fromBase64(fromSecure);
@@ -136,7 +123,7 @@ class ScreenshotStore {
     // 3) Create once — never race-regenerate (single-flight via _keyLoad).
     final key = enc.Key.fromSecureRandom(32);
     await file.writeAsString(key.base64, flush: true);
-    await _safeSecureWrite(key.base64);
+    await _storage.write(key: _secureKeyName, value: key.base64);
     return key;
   }
 
@@ -158,34 +145,28 @@ class ScreenshotStore {
     required int height,
     required Uint8List pngBytes,
     bool isTestCapture = false,
+    bool persistImage = true,
     DateTime? takenAt,
     Map<String, Object?>? metadata,
   }) async {
-    final key = await _aesKey();
-    final iv = enc.IV.fromSecureRandom(16);
-    const mode = 'cbc';
-    final encrypted = _encrypter(
-      key,
-      mode: mode,
-    ).encryptBytes(pngBytes, iv: iv);
-
     final id = _uuid.v4();
-    final dir = await _dir();
-    final file = File(p.join(dir.path, '$id.bin'));
-    final payload = jsonEncode({
-      'v': 2,
-      'mode': mode,
-      'iv': iv.base64,
-      'data': encrypted.base64,
-    });
-    await file.writeAsString(payload, flush: true);
+    var filePath = '';
+    if (persistImage) {
+      final key = await _aesKey();
+      final iv = enc.IV.fromSecureRandom(16);
+      const mode = 'cbc';
+      final encrypted = _encrypter(key, mode: mode).encryptBytes(pngBytes, iv: iv);
+      final dir = await _dir();
+      final file = File(p.join(dir.path, '$id.bin'));
+      final payload = jsonEncode({'v': 2, 'mode': mode, 'iv': iv.base64, 'data': encrypted.base64});
+      await file.writeAsString(payload, flush: true);
+      filePath = file.path;
+    }
 
     final at = (takenAt ?? DateTime.now()).toUtc();
     final localDay = dayKey(at.toLocal());
 
-    return _db
-        .into(_db.screenshots)
-        .insertReturning(
+    return _db.into(_db.screenshots).insertReturning(
           ScreenshotsCompanion.insert(
             id: id,
             sessionId: sessionId,
@@ -194,15 +175,13 @@ class ScreenshotStore {
             takenDay: Value(localDay),
             displayIndex: displayIndex,
             takenAt: at,
-            filePath: file.path,
+            filePath: filePath,
             width: width,
             height: height,
             byteSize: Value(pngBytes.length),
             isTestCapture: Value(isTestCapture),
             metadataJson: Value(
-              metadata == null || metadata.isEmpty
-                  ? null
-                  : jsonEncode(metadata),
+              metadata == null || metadata.isEmpty ? null : jsonEncode(metadata),
             ),
           ),
         );
@@ -224,7 +203,11 @@ class ScreenshotStore {
       final data = enc.Encrypted.fromBase64(dataB64);
       final declared = payload['mode'] as String?;
 
-      final modes = <String>[?declared, 'sic', 'cbc'];
+      final modes = <String>[
+        ?declared,
+        'sic',
+        'cbc',
+      ];
       final tried = <String>{};
       for (final mode in modes) {
         if (!tried.add(mode)) continue;
@@ -279,11 +262,10 @@ class ScreenshotStore {
   }
 
   Future<List<String>> distinctTakenDays({int limit = 60}) async {
-    final rows =
-        await (_db.select(_db.screenshots)
-              ..orderBy([(t) => OrderingTerm.desc(t.takenAt)])
-              ..limit(500))
-            .get();
+    final rows = await (_db.select(_db.screenshots)
+          ..orderBy([(t) => OrderingTerm.desc(t.takenAt)])
+          ..limit(500))
+        .get();
     final days = <String>{};
     for (final row in rows) {
       final day = row.takenDay ?? dayKey(row.takenAt.toLocal());
@@ -295,9 +277,9 @@ class ScreenshotStore {
   }
 
   Future<void> deleteScreenshot(String id) async {
-    final row = await (_db.select(
-      _db.screenshots,
-    )..where((t) => t.id.equals(id))).getSingleOrNull();
+    final row = await (_db.select(_db.screenshots)
+          ..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
     if (row != null) {
       final file = File(row.filePath);
       if (await file.exists()) {
@@ -305,5 +287,30 @@ class ScreenshotStore {
       }
     }
     await (_db.delete(_db.screenshots)..where((t) => t.id.equals(id))).go();
+  }
+
+  Future<void> updateUploadStatus({
+    required String id,
+    required String status,
+    String? s3ObjectKey,
+    DateTime? uploadedAt,
+  }) async {
+    await (_db.update(_db.screenshots)..where((t) => t.id.equals(id))).write(
+      ScreenshotsCompanion(
+        uploadStatus: Value(status),
+        s3ObjectKey: s3ObjectKey != null ? Value(s3ObjectKey) : const Value.absent(),
+        uploadedAt: uploadedAt != null ? Value(uploadedAt) : const Value.absent(),
+      ),
+    );
+  }
+
+  Future<List<Screenshot>> getPendingUploads() async {
+    return (_db.select(_db.screenshots)
+          ..where((t) =>
+              (t.uploadStatus.isNull() |
+                  t.uploadStatus.equals('pending')))
+          ..orderBy([(t) => OrderingTerm.desc(t.takenAt)])
+          ..limit(1))
+        .get();
   }
 }

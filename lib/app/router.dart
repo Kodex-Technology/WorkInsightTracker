@@ -31,14 +31,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       final loggingIn = state.matchedLocation == '/login';
       final splashing = state.matchedLocation == '/splash';
       final onboarding = state.matchedLocation == '/onboarding/permissions';
-      final adminRoute = state.matchedLocation.startsWith('/app/admin');
 
       if (auth.isLoading || splashing) return null;
       if (!auth.isAuthenticated && !loggingIn) return '/login';
       if (auth.isAuthenticated && loggingIn) {
-        if (auth.user?.isAdmin == true) {
-          return '/app/admin';
-        }
         final settings = await ref.read(settingsRepositoryProvider).load();
         return settings.onboardingCompleted
             ? '/app/dashboard'
@@ -46,48 +42,28 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       if (auth.isAuthenticated &&
           !onboarding &&
-          auth.user?.isAdmin != true &&
           state.matchedLocation.startsWith('/app')) {
         final settings = await ref.read(settingsRepositoryProvider).load();
         if (!settings.onboardingCompleted) {
           return '/onboarding/permissions';
         }
       }
-      if (adminRoute) {
-        if (auth.user?.isAdmin != true) {
-          return '/app/dashboard';
-        }
-      }
       final loc = state.matchedLocation;
-      if (loc.startsWith('/app/settings') && auth.user?.isAdmin != true) {
-        return '/app/dashboard';
-      }
-      // Admin accounts stay out of personal tracking surfaces.
-      if (auth.user?.isAdmin == true) {
-        const tracking = [
-          '/app/dashboard',
-          '/app/timeline',
-          '/app/calendar',
-          '/app/projects',
-        ];
-        if (tracking.any(loc.startsWith)) {
-          return '/app/admin';
-        }
-      }
+      if (loc.startsWith('/app/settings')) return '/app/dashboard';
       final flags = ref.read(featureTogglesProvider);
       if (loc.startsWith('/app/timeline') && !flags.isOn(FeatureId.timeline)) {
-        return auth.user?.isAdmin == true ? '/app/admin' : '/app/dashboard';
+        return '/app/dashboard';
       }
       if (loc.startsWith('/app/screenshots') &&
           !flags.isOn(FeatureId.screenshots)) {
-        return auth.user?.isAdmin == true ? '/app/admin' : '/app/dashboard';
+        return '/app/dashboard';
       }
       if (loc.startsWith('/app/calendar') && !flags.isOn(FeatureId.calendar)) {
-        return auth.user?.isAdmin == true ? '/app/admin' : '/app/dashboard';
+        return '/app/dashboard';
       }
       if (loc.startsWith('/app/projects') &&
           !flags.isOn(FeatureId.projectsScreen)) {
-        return auth.user?.isAdmin == true ? '/app/admin' : '/app/dashboard';
+        return '/app/dashboard';
       }
       return null;
     },

@@ -14,9 +14,10 @@ class SessionRepository {
     String? workspaceId,
     String? projectId,
     String? taskId,
+    DateTime? startedAt,
   }) async {
     final id = _uuid.v4();
-    final now = DateTime.now().toUtc();
+    final now = (startedAt ?? DateTime.now()).toUtc();
     await _db.into(_db.trackingSessions).insert(
           TrackingSessionsCompanion.insert(
             id: id,
@@ -28,7 +29,7 @@ class SessionRepository {
             startedAt: now,
           ),
         );
-    await addEvent(sessionId: id, type: 'started');
+    await addEvent(sessionId: id, type: 'started', at: now);
     return id;
   }
 
@@ -64,8 +65,9 @@ class SessionRepository {
     required int activeMs,
     required int idleMs,
     required int pausedMs,
+    DateTime? endedAt,
   }) async {
-    final now = DateTime.now().toUtc();
+    final now = (endedAt ?? DateTime.now()).toUtc();
     await (_db.update(_db.trackingSessions)
           ..where((t) => t.id.equals(sessionId)))
         .write(
@@ -77,19 +79,20 @@ class SessionRepository {
             pausedMs: Value(pausedMs),
           ),
         );
-    await addEvent(sessionId: sessionId, type: 'stopped');
+    await addEvent(sessionId: sessionId, type: 'stopped', at: now);
   }
 
   Future<void> addEvent({
     required String sessionId,
     required String type,
     String? payload,
+    DateTime? at,
   }) async {
     await _db.into(_db.sessionEvents).insert(
           SessionEventsCompanion.insert(
             sessionId: sessionId,
             type: type,
-            at: DateTime.now().toUtc(),
+            at: (at ?? DateTime.now()).toUtc(),
             payload: Value(payload),
           ),
         );

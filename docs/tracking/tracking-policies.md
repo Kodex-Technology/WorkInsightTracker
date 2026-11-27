@@ -12,6 +12,7 @@ Any new default must be added here **before** implementation.
 | Screenshot interval (default) | **10 minutes** |
 | Screenshot interval options | **1, 5, 10, 15** minutes (admin/settings; min **1**) |
 | Screenshot schedule | Fixed interval (extensible later for randomized) |
+| Tracking section rollover | Close the current local session segment and open a new segment at every configured tracking interval, whether screenshots are enabled or not |
 | Capture while | Authorized **Tracking** or **Idle** only |
 | No capture while | **Paused** or **Stopped** |
 | Input tracking | Non-content activity signals only |
@@ -24,7 +25,7 @@ Any new default must be added here **before** implementation.
 | Window titles | **Not stored** in the current vertical slice (process name only) |
 | Clipboard / passwords | **Never** collected |
 | Application tracking | Foreground app + permitted window metadata |
-| Storage | Drift/SQLite + encrypted screenshot files |
+| Storage | Screenshot image bytes are uploaded through the authenticated backend API to private S3 storage using S3 server-side AES-256 encryption; object keys are `tracker-screenshots/YYYY-MM-DD/{user_id}/{uuid}.png`. The desktop stores screenshot metadata locally only for tracking/productivity; image files are not retained locally for new captures. |
 | Background | Continue while minimized to tray |
 | Stop/pause | User-controlled only (plus explicit recovery flows) |
 | Privacy | Disclosure, permissions, sensitive-app exclusions |

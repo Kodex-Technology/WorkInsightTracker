@@ -10,8 +10,14 @@ import 'package:witrack/data/settings/settings_repository.dart';
 import 'package:witrack/features/auth/auth_controller.dart';
 import 'package:witrack/platform/tracking_engine.dart';
 
-final settingsProvider = FutureProvider<TrackingSettings>((ref) {
-  return ref.watch(settingsRepositoryProvider).load();
+final settingsProvider = FutureProvider<TrackingSettings>((ref) async {
+  final user = ref.watch(authControllerProvider).user;
+  final repository = ref.watch(settingsRepositoryProvider);
+  if (user?.token?.isNotEmpty == true) {
+    final remote = await repository.loadRemote(token: user!.token!);
+    if (remote != null) return remote;
+  }
+  return repository.load();
 });
 
 final diagnosticsProvider = FutureProvider<PermissionStatusSnapshot>((ref) {
@@ -125,11 +131,25 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
+      final user = ref.read(authControllerProvider).user;
+      if (user?.token?.isNotEmpty != true) {
+        throw StateError('Sign in through the organization portal to save preferences to the server.');
+      }
+      await ref.read(settingsRepositoryProvider).saveRemote(
+            _draft,
+            token: user!.token!,
+          );
       await ref.read(settingsRepositoryProvider).save(_draft);
       ref.invalidate(settingsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Local tracking preferences saved')),
+          const SnackBar(content: Text('Tracking preferences saved to the server and this device')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save preferences: $error')),
         );
       }
     } finally {
@@ -166,20 +186,10 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
                   ? 'Every ${_draft.screenshotIntervalMinutes} min'
                   : 'Disabled',
             ),
-            if (isAdmin) ...[
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton.tonal(
-                  onPressed: () => context.go('/app/admin'),
-                  child: const Text('Open Admin Panel'),
-                ),
-              ),
-            ],
           ],
           if (section == 'Tracking') ...[
             Text(
-              'Device preferences stored locally on this machine.',
+              'Preferences are loaded from the server and saved to your account.',
               style: theme.textTheme.bodySmall,
             ),
             SwitchListTile(

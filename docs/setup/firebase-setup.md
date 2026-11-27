@@ -33,14 +33,14 @@ If CLI create fails (quota/permissions), create both projects in the [Firebase C
 For **each** project:
 
 1. Add a **Web** app (admin portal) — copy `apiKey`, `authDomain`, `projectId`, `appId`, `messagingSenderId`, `storageBucket`.
-2. Add Windows / macOS apps if FlutterFire configure requires them, or fill `config/dev.json` / `config/prod.json` manually from the web app config plus a desktop OAuth client (below).
+2. Add Windows / macOS apps if FlutterFire configure requires them.
 
 ```bash
 firebase use witrack-dev
 dart pub global run flutterfire_cli:flutterfire configure --project=witrack-dev --platforms=windows,macos,web --yes
 ```
 
-Repeat for production into separate option files / dart-defines. Witrack prefers `--dart-define-from-file=config/dev.json` over committing generated secrets into source when avoidable.
+Desktop API routing is configured separately through `.env` / `.env.production`; do not put API endpoints in dart-defines. Firebase client setup remains deferred for the current desktop auth flow.
 
 ## 3. Google provider + desktop OAuth client
 
@@ -62,8 +62,7 @@ In Google Cloud Console (same project) → APIs & Services → Credentials:
 
 ```bash
 cd server
-cp ../.env.server.example .env
-# Set GOOGLE_APPLICATION_CREDENTIALS to a gitignored service account JSON
+# Set FIREBASE_PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS in the server environment.
 npm install
 npm start
 
@@ -97,22 +96,11 @@ Default emails: `kodextech9@gmail.com`, `zainskodex@gmail.com` → `super_admin`
 
 ## 8. Desktop dart-defines
 
-```bash
-cp config/dev.json.example config/dev.json
-# Fill Firebase + OAuth fields
-flutter run -d windows --dart-define-from-file=config/dev.json
-```
-
-Production:
-
-```bash
-flutter run -d windows --dart-define-from-file=config/prod.json
-# ENABLE_LOCAL_DEV_AUTH must be false
-```
+Use `.env` for development. Production packages use `.env.production` and must set `APP_ENV=production`; see [windows-build.md](windows-build.md).
 
 ## 9. Windows real Google sign-in smoke test
 
-1. Launch with filled `config/dev.json`.
+1. Launch with development configuration in `.env`.
 2. Login → **Continue with Google** → system browser opens (not an embedded WebView).
 3. Pick account → consent → browser returns to loopback → app shows validating → dashboard.
 4. Restart app → session restores with same Firebase UID.
@@ -120,7 +108,7 @@ flutter run -d windows --dart-define-from-file=config/prod.json
 
 ## 10. macOS verification checklist (when on a Mac)
 
-1. Same `config/dev.json` (or macOS-specific app id if registered separately).
+1. Same `.env` configuration (or macOS-specific app id if registered separately).
 2. Allow local networking / loopback for the callback listener.
 3. Repeat smoke steps 2–5 from Windows section.
 4. Mark macOS runtime **passed** only after this checklist succeeds on hardware. Windows-only development leaves macOS **pending**.

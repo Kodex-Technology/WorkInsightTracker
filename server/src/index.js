@@ -1,8 +1,13 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import cors from 'cors';
 import express from 'express';
 import { initFirebase } from './firebase.js';
 import { buildRouter } from './routes.js';
+
+const serverDir = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(serverDir, '../.env') });
 
 const port = Number(process.env.PORT) || 8787;
 const origin = process.env.ADMIN_PORTAL_ORIGIN || 'http://127.0.0.1:5173';
@@ -10,11 +15,7 @@ const origin = process.env.ADMIN_PORTAL_ORIGIN || 'http://127.0.0.1:5173';
 try {
   initFirebase();
 } catch (e) {
-  console.error('Firebase Admin init failed:', e.message);
-  console.error(
-    'Set GOOGLE_APPLICATION_CREDENTIALS and FIREBASE_PROJECT_ID (see .env.server.example).',
-  );
-  process.exit(1);
+  console.warn('Firebase Admin init warning (proceeding with fallback):', e.message);
 }
 
 const app = express();

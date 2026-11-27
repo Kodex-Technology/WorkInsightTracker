@@ -5363,6 +5363,39 @@ class $ScreenshotsTable extends Screenshots
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _uploadStatusMeta = const VerificationMeta(
+    'uploadStatus',
+  );
+  @override
+  late final GeneratedColumn<String> uploadStatus = GeneratedColumn<String>(
+    'upload_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _s3ObjectKeyMeta = const VerificationMeta(
+    's3ObjectKey',
+  );
+  @override
+  late final GeneratedColumn<String> s3ObjectKey = GeneratedColumn<String>(
+    's3_object_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _uploadedAtMeta = const VerificationMeta(
+    'uploadedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> uploadedAt = GeneratedColumn<DateTime>(
+    'uploaded_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -5378,6 +5411,9 @@ class $ScreenshotsTable extends Screenshots
     byteSize,
     isTestCapture,
     metadataJson,
+    uploadStatus,
+    s3ObjectKey,
+    uploadedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5489,6 +5525,30 @@ class $ScreenshotsTable extends Screenshots
         ),
       );
     }
+    if (data.containsKey('upload_status')) {
+      context.handle(
+        _uploadStatusMeta,
+        uploadStatus.isAcceptableOrUnknown(
+          data['upload_status']!,
+          _uploadStatusMeta,
+        ),
+      );
+    }
+    if (data.containsKey('s3_object_key')) {
+      context.handle(
+        _s3ObjectKeyMeta,
+        s3ObjectKey.isAcceptableOrUnknown(
+          data['s3_object_key']!,
+          _s3ObjectKeyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('uploaded_at')) {
+      context.handle(
+        _uploadedAtMeta,
+        uploadedAt.isAcceptableOrUnknown(data['uploaded_at']!, _uploadedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -5550,6 +5610,18 @@ class $ScreenshotsTable extends Screenshots
         DriftSqlType.string,
         data['${effectivePrefix}metadata_json'],
       ),
+      uploadStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}upload_status'],
+      ),
+      s3ObjectKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}s3_object_key'],
+      ),
+      uploadedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}uploaded_at'],
+      ),
     );
   }
 
@@ -5577,6 +5649,9 @@ class Screenshot extends DataClass implements Insertable<Screenshot> {
 
   /// Extensible JSON bag for future backend/sync fields — never required to read.
   final String? metadataJson;
+  final String? uploadStatus;
+  final String? s3ObjectKey;
+  final DateTime? uploadedAt;
   const Screenshot({
     required this.id,
     required this.sessionId,
@@ -5591,6 +5666,9 @@ class Screenshot extends DataClass implements Insertable<Screenshot> {
     required this.byteSize,
     required this.isTestCapture,
     this.metadataJson,
+    this.uploadStatus,
+    this.s3ObjectKey,
+    this.uploadedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5615,6 +5693,15 @@ class Screenshot extends DataClass implements Insertable<Screenshot> {
     map['is_test_capture'] = Variable<bool>(isTestCapture);
     if (!nullToAbsent || metadataJson != null) {
       map['metadata_json'] = Variable<String>(metadataJson);
+    }
+    if (!nullToAbsent || uploadStatus != null) {
+      map['upload_status'] = Variable<String>(uploadStatus);
+    }
+    if (!nullToAbsent || s3ObjectKey != null) {
+      map['s3_object_key'] = Variable<String>(s3ObjectKey);
+    }
+    if (!nullToAbsent || uploadedAt != null) {
+      map['uploaded_at'] = Variable<DateTime>(uploadedAt);
     }
     return map;
   }
@@ -5642,6 +5729,15 @@ class Screenshot extends DataClass implements Insertable<Screenshot> {
       metadataJson: metadataJson == null && nullToAbsent
           ? const Value.absent()
           : Value(metadataJson),
+      uploadStatus: uploadStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(uploadStatus),
+      s3ObjectKey: s3ObjectKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(s3ObjectKey),
+      uploadedAt: uploadedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(uploadedAt),
     );
   }
 
@@ -5664,6 +5760,9 @@ class Screenshot extends DataClass implements Insertable<Screenshot> {
       byteSize: serializer.fromJson<int>(json['byteSize']),
       isTestCapture: serializer.fromJson<bool>(json['isTestCapture']),
       metadataJson: serializer.fromJson<String?>(json['metadataJson']),
+      uploadStatus: serializer.fromJson<String?>(json['uploadStatus']),
+      s3ObjectKey: serializer.fromJson<String?>(json['s3ObjectKey']),
+      uploadedAt: serializer.fromJson<DateTime?>(json['uploadedAt']),
     );
   }
   @override
@@ -5683,6 +5782,9 @@ class Screenshot extends DataClass implements Insertable<Screenshot> {
       'byteSize': serializer.toJson<int>(byteSize),
       'isTestCapture': serializer.toJson<bool>(isTestCapture),
       'metadataJson': serializer.toJson<String?>(metadataJson),
+      'uploadStatus': serializer.toJson<String?>(uploadStatus),
+      's3ObjectKey': serializer.toJson<String?>(s3ObjectKey),
+      'uploadedAt': serializer.toJson<DateTime?>(uploadedAt),
     };
   }
 
@@ -5700,6 +5802,9 @@ class Screenshot extends DataClass implements Insertable<Screenshot> {
     int? byteSize,
     bool? isTestCapture,
     Value<String?> metadataJson = const Value.absent(),
+    Value<String?> uploadStatus = const Value.absent(),
+    Value<String?> s3ObjectKey = const Value.absent(),
+    Value<DateTime?> uploadedAt = const Value.absent(),
   }) => Screenshot(
     id: id ?? this.id,
     sessionId: sessionId ?? this.sessionId,
@@ -5714,6 +5819,9 @@ class Screenshot extends DataClass implements Insertable<Screenshot> {
     byteSize: byteSize ?? this.byteSize,
     isTestCapture: isTestCapture ?? this.isTestCapture,
     metadataJson: metadataJson.present ? metadataJson.value : this.metadataJson,
+    uploadStatus: uploadStatus.present ? uploadStatus.value : this.uploadStatus,
+    s3ObjectKey: s3ObjectKey.present ? s3ObjectKey.value : this.s3ObjectKey,
+    uploadedAt: uploadedAt.present ? uploadedAt.value : this.uploadedAt,
   );
   Screenshot copyWithCompanion(ScreenshotsCompanion data) {
     return Screenshot(
@@ -5736,6 +5844,15 @@ class Screenshot extends DataClass implements Insertable<Screenshot> {
       metadataJson: data.metadataJson.present
           ? data.metadataJson.value
           : this.metadataJson,
+      uploadStatus: data.uploadStatus.present
+          ? data.uploadStatus.value
+          : this.uploadStatus,
+      s3ObjectKey: data.s3ObjectKey.present
+          ? data.s3ObjectKey.value
+          : this.s3ObjectKey,
+      uploadedAt: data.uploadedAt.present
+          ? data.uploadedAt.value
+          : this.uploadedAt,
     );
   }
 
@@ -5754,7 +5871,10 @@ class Screenshot extends DataClass implements Insertable<Screenshot> {
           ..write('height: $height, ')
           ..write('byteSize: $byteSize, ')
           ..write('isTestCapture: $isTestCapture, ')
-          ..write('metadataJson: $metadataJson')
+          ..write('metadataJson: $metadataJson, ')
+          ..write('uploadStatus: $uploadStatus, ')
+          ..write('s3ObjectKey: $s3ObjectKey, ')
+          ..write('uploadedAt: $uploadedAt')
           ..write(')'))
         .toString();
   }
@@ -5774,6 +5894,9 @@ class Screenshot extends DataClass implements Insertable<Screenshot> {
     byteSize,
     isTestCapture,
     metadataJson,
+    uploadStatus,
+    s3ObjectKey,
+    uploadedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -5791,7 +5914,10 @@ class Screenshot extends DataClass implements Insertable<Screenshot> {
           other.height == this.height &&
           other.byteSize == this.byteSize &&
           other.isTestCapture == this.isTestCapture &&
-          other.metadataJson == this.metadataJson);
+          other.metadataJson == this.metadataJson &&
+          other.uploadStatus == this.uploadStatus &&
+          other.s3ObjectKey == this.s3ObjectKey &&
+          other.uploadedAt == this.uploadedAt);
 }
 
 class ScreenshotsCompanion extends UpdateCompanion<Screenshot> {
@@ -5808,6 +5934,9 @@ class ScreenshotsCompanion extends UpdateCompanion<Screenshot> {
   final Value<int> byteSize;
   final Value<bool> isTestCapture;
   final Value<String?> metadataJson;
+  final Value<String?> uploadStatus;
+  final Value<String?> s3ObjectKey;
+  final Value<DateTime?> uploadedAt;
   final Value<int> rowid;
   const ScreenshotsCompanion({
     this.id = const Value.absent(),
@@ -5823,6 +5952,9 @@ class ScreenshotsCompanion extends UpdateCompanion<Screenshot> {
     this.byteSize = const Value.absent(),
     this.isTestCapture = const Value.absent(),
     this.metadataJson = const Value.absent(),
+    this.uploadStatus = const Value.absent(),
+    this.s3ObjectKey = const Value.absent(),
+    this.uploadedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ScreenshotsCompanion.insert({
@@ -5839,6 +5971,9 @@ class ScreenshotsCompanion extends UpdateCompanion<Screenshot> {
     this.byteSize = const Value.absent(),
     this.isTestCapture = const Value.absent(),
     this.metadataJson = const Value.absent(),
+    this.uploadStatus = const Value.absent(),
+    this.s3ObjectKey = const Value.absent(),
+    this.uploadedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        sessionId = Value(sessionId),
@@ -5861,6 +5996,9 @@ class ScreenshotsCompanion extends UpdateCompanion<Screenshot> {
     Expression<int>? byteSize,
     Expression<bool>? isTestCapture,
     Expression<String>? metadataJson,
+    Expression<String>? uploadStatus,
+    Expression<String>? s3ObjectKey,
+    Expression<DateTime>? uploadedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -5877,6 +6015,9 @@ class ScreenshotsCompanion extends UpdateCompanion<Screenshot> {
       if (byteSize != null) 'byte_size': byteSize,
       if (isTestCapture != null) 'is_test_capture': isTestCapture,
       if (metadataJson != null) 'metadata_json': metadataJson,
+      if (uploadStatus != null) 'upload_status': uploadStatus,
+      if (s3ObjectKey != null) 's3_object_key': s3ObjectKey,
+      if (uploadedAt != null) 'uploaded_at': uploadedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -5895,6 +6036,9 @@ class ScreenshotsCompanion extends UpdateCompanion<Screenshot> {
     Value<int>? byteSize,
     Value<bool>? isTestCapture,
     Value<String?>? metadataJson,
+    Value<String?>? uploadStatus,
+    Value<String?>? s3ObjectKey,
+    Value<DateTime?>? uploadedAt,
     Value<int>? rowid,
   }) {
     return ScreenshotsCompanion(
@@ -5911,6 +6055,9 @@ class ScreenshotsCompanion extends UpdateCompanion<Screenshot> {
       byteSize: byteSize ?? this.byteSize,
       isTestCapture: isTestCapture ?? this.isTestCapture,
       metadataJson: metadataJson ?? this.metadataJson,
+      uploadStatus: uploadStatus ?? this.uploadStatus,
+      s3ObjectKey: s3ObjectKey ?? this.s3ObjectKey,
+      uploadedAt: uploadedAt ?? this.uploadedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -5957,6 +6104,15 @@ class ScreenshotsCompanion extends UpdateCompanion<Screenshot> {
     if (metadataJson.present) {
       map['metadata_json'] = Variable<String>(metadataJson.value);
     }
+    if (uploadStatus.present) {
+      map['upload_status'] = Variable<String>(uploadStatus.value);
+    }
+    if (s3ObjectKey.present) {
+      map['s3_object_key'] = Variable<String>(s3ObjectKey.value);
+    }
+    if (uploadedAt.present) {
+      map['uploaded_at'] = Variable<DateTime>(uploadedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -5979,6 +6135,9 @@ class ScreenshotsCompanion extends UpdateCompanion<Screenshot> {
           ..write('byteSize: $byteSize, ')
           ..write('isTestCapture: $isTestCapture, ')
           ..write('metadataJson: $metadataJson, ')
+          ..write('uploadStatus: $uploadStatus, ')
+          ..write('s3ObjectKey: $s3ObjectKey, ')
+          ..write('uploadedAt: $uploadedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -10009,6 +10168,9 @@ typedef $$ScreenshotsTableCreateCompanionBuilder =
       Value<int> byteSize,
       Value<bool> isTestCapture,
       Value<String?> metadataJson,
+      Value<String?> uploadStatus,
+      Value<String?> s3ObjectKey,
+      Value<DateTime?> uploadedAt,
       Value<int> rowid,
     });
 typedef $$ScreenshotsTableUpdateCompanionBuilder =
@@ -10026,6 +10188,9 @@ typedef $$ScreenshotsTableUpdateCompanionBuilder =
       Value<int> byteSize,
       Value<bool> isTestCapture,
       Value<String?> metadataJson,
+      Value<String?> uploadStatus,
+      Value<String?> s3ObjectKey,
+      Value<DateTime?> uploadedAt,
       Value<int> rowid,
     });
 
@@ -10100,6 +10265,21 @@ class $$ScreenshotsTableFilterComposer
 
   ColumnFilters<String> get metadataJson => $composableBuilder(
     column: $table.metadataJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uploadStatus => $composableBuilder(
+    column: $table.uploadStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get s3ObjectKey => $composableBuilder(
+    column: $table.s3ObjectKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get uploadedAt => $composableBuilder(
+    column: $table.uploadedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -10177,6 +10357,21 @@ class $$ScreenshotsTableOrderingComposer
     column: $table.metadataJson,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get uploadStatus => $composableBuilder(
+    column: $table.uploadStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get s3ObjectKey => $composableBuilder(
+    column: $table.s3ObjectKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get uploadedAt => $composableBuilder(
+    column: $table.uploadedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ScreenshotsTableAnnotationComposer
@@ -10232,6 +10427,21 @@ class $$ScreenshotsTableAnnotationComposer
     column: $table.metadataJson,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get uploadStatus => $composableBuilder(
+    column: $table.uploadStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get s3ObjectKey => $composableBuilder(
+    column: $table.s3ObjectKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get uploadedAt => $composableBuilder(
+    column: $table.uploadedAt,
+    builder: (column) => column,
+  );
 }
 
 class $$ScreenshotsTableTableManager
@@ -10278,6 +10488,9 @@ class $$ScreenshotsTableTableManager
                 Value<int> byteSize = const Value.absent(),
                 Value<bool> isTestCapture = const Value.absent(),
                 Value<String?> metadataJson = const Value.absent(),
+                Value<String?> uploadStatus = const Value.absent(),
+                Value<String?> s3ObjectKey = const Value.absent(),
+                Value<DateTime?> uploadedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ScreenshotsCompanion(
                 id: id,
@@ -10293,6 +10506,9 @@ class $$ScreenshotsTableTableManager
                 byteSize: byteSize,
                 isTestCapture: isTestCapture,
                 metadataJson: metadataJson,
+                uploadStatus: uploadStatus,
+                s3ObjectKey: s3ObjectKey,
+                uploadedAt: uploadedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -10310,6 +10526,9 @@ class $$ScreenshotsTableTableManager
                 Value<int> byteSize = const Value.absent(),
                 Value<bool> isTestCapture = const Value.absent(),
                 Value<String?> metadataJson = const Value.absent(),
+                Value<String?> uploadStatus = const Value.absent(),
+                Value<String?> s3ObjectKey = const Value.absent(),
+                Value<DateTime?> uploadedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ScreenshotsCompanion.insert(
                 id: id,
@@ -10325,6 +10544,9 @@ class $$ScreenshotsTableTableManager
                 byteSize: byteSize,
                 isTestCapture: isTestCapture,
                 metadataJson: metadataJson,
+                uploadStatus: uploadStatus,
+                s3ObjectKey: s3ObjectKey,
+                uploadedAt: uploadedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
