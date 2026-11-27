@@ -27,9 +27,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       duration: const Duration(milliseconds: 900),
     );
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _rise = Tween<double>(begin: 16, end: 0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
+    _rise = Tween<double>(
+      begin: 16,
+      end: 0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
     Future<void>.delayed(AppConstants.splashDuration, _tryNavigate);
   }
@@ -46,9 +47,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       context.go('/login');
       return;
     }
-    context.go(
-      auth.user?.isAdmin == true ? '/app/admin' : '/app/dashboard',
-    );
+    context.go('/app/dashboard');
   }
 
   @override

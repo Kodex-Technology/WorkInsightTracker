@@ -32,6 +32,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final splashing = state.matchedLocation == '/splash';
       final onboarding = state.matchedLocation == '/onboarding/permissions';
 
+      if (state.matchedLocation == '/app/admin') return '/app/dashboard';
       if (auth.isLoading || splashing) return null;
       if (!auth.isAuthenticated && !loggingIn) return '/login';
       if (auth.isAuthenticated && loggingIn) {
@@ -74,17 +75,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/login',
-        pageBuilder: (context, state) => FadeSlidePage(
-          key: state.pageKey,
-          child: const LoginScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            FadeSlidePage(key: state.pageKey, child: const LoginScreen()),
       ),
       GoRoute(
         path: '/onboarding/permissions',
-        pageBuilder: (context, state) => FadeSlidePage(
-          key: state.pageKey,
-          child: const PermissionsScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            FadeSlidePage(key: state.pageKey, child: const PermissionsScreen()),
       ),
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
@@ -133,17 +130,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/app/admin',
-            pageBuilder: (context, state) => FadeSlidePage(
-              key: state.pageKey,
-              child: const AdminScreen(),
-            ),
+            pageBuilder: (context, state) =>
+                FadeSlidePage(key: state.pageKey, child: const AdminScreen()),
           ),
         ],
       ),
     ],
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(child: Text('Route not found: ${state.uri}')),
-    ),
+    errorBuilder: (context, state) =>
+        Scaffold(body: Center(child: Text('Route not found: ${state.uri}'))),
   );
 });
 

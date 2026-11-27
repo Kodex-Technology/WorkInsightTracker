@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -11,7 +12,7 @@ export 'package:witrack/data/auth/auth_models.dart';
 
 class AuthRepository {
   AuthRepository(this._db, this._prefs, {DeviceRegistry? devices})
-      : _devices = devices ?? DeviceRegistry(_db, _prefs);
+    : _devices = devices ?? DeviceRegistry(_db, _prefs);
 
   final AppDatabase _db;
   final SharedPreferences _prefs;
@@ -28,8 +29,9 @@ class AuthRepository {
     final userId = _prefs.getString(_sessionKey);
     final token = _prefs.getString(_tokenKey);
     if (userId == null) return null;
-    final row = await (_db.select(_db.users)..where((t) => t.id.equals(userId)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.users,
+    )..where((t) => t.id.equals(userId))).getSingleOrNull();
     if (row == null) {
       await signOut();
       return null;
@@ -90,13 +92,15 @@ class AuthRepository {
     final firstName = userData['first_name']?.toString();
     final lastName = userData['last_name']?.toString();
     final profileImage = userData['profile_image']?.toString();
-    final department = userData['department']?.toString() ??
+    final department =
+        userData['department']?.toString() ??
         userData['sub_department']?.toString();
 
     String? designationName;
     final desigRaw = userData['designation'];
     if (desigRaw is Map) {
-      designationName = desigRaw['designation_name']?.toString() ??
+      designationName =
+          desigRaw['designation_name']?.toString() ??
           desigRaw['description']?.toString() ??
           desigRaw['name']?.toString();
     } else if (desigRaw is String) {
@@ -112,64 +116,57 @@ class AuthRepository {
       orgName = orgRaw;
     }
 
-    final displayName = (firstName != null &&
+    final displayName =
+        (firstName != null &&
             firstName.trim().isNotEmpty &&
             lastName != null &&
             lastName.trim().isNotEmpty)
         ? '${firstName.trim()} ${lastName.trim()}'
         : (firstName?.trim().isNotEmpty == true
-            ? firstName!.trim()
-            : (userData['name']?.toString() ?? 'Portal User'));
+              ? firstName!.trim()
+              : (userData['name']?.toString() ?? 'Portal User'));
 
     final userRoleRaw = userData['user_role'];
     if (userRoleRaw is! Map) {
       throw Exception('User role information is missing.');
     }
-    final normalizedRole =
-        (userRoleRaw['role_type']?.toString().trim() ?? '').toLowerCase();
-    if (normalizedRole.isEmpty) {
+    final portalRole = userRoleRaw['role_type']?.toString().trim() ?? '';
+    if (portalRole.isEmpty) {
       throw Exception('User role type is missing.');
     }
 
-    final AuthRole role;
-    if (normalizedRole == 'admin') {
-      role = AuthRole.admin;
-    } else if (normalizedRole == 'employee') {
-      role = AuthRole.user;
-    } else {
-      throw Exception('Unsupported portal role: ${userRoleRaw['role_type']}');
-    }
-
-    final roleStr = role == AuthRole.admin ? 'admin' : 'user';
+    const role = AuthRole.user;
+    const roleStr = 'user';
     final userDataJsonStr = jsonEncode(userData);
 
     final portalUuid = userData['uuid']?.toString().trim();
     final portalId = userData['id']?.toString().trim();
     final stablePortalId = portalUuid != null && portalUuid.isNotEmpty
         ? 'portal_$portalUuid'
-        : (portalId != null && portalId.isNotEmpty
-            ? 'portal_$portalId'
-            : null);
+        : (portalId != null && portalId.isNotEmpty ? 'portal_$portalId' : null);
 
     User? existing;
     if (stablePortalId != null) {
-      existing = await (_db.select(_db.users)
-            ..where((t) => t.id.equals(stablePortalId)))
-          .getSingleOrNull();
+      existing = await (_db.select(
+        _db.users,
+      )..where((t) => t.id.equals(stablePortalId))).getSingleOrNull();
     }
-    existing ??= await (_db.select(_db.users)
-          ..where((t) => t.email.equals(email)))
-        .getSingleOrNull();
+    existing ??= await (_db.select(
+      _db.users,
+    )..where((t) => t.email.equals(email))).getSingleOrNull();
 
-    final user = existing ??
-        await _db.into(_db.users).insertReturning(
+    final user =
+        existing ??
+        await _db
+            .into(_db.users)
+            .insertReturning(
               UsersCompanion.insert(
                 id: stablePortalId ?? const Uuid().v4(),
                 email: email,
                 displayName: displayName,
                 createdAt: DateTime.now().toUtc(),
                 authProvider: const Value('portal'),
-                role: Value(roleStr),
+                role: const Value(roleStr),
                 firstName: Value(firstName),
                 lastName: Value(lastName),
                 profileImage: Value(profileImage),
@@ -180,19 +177,20 @@ class AuthRepository {
               ),
             );
 
-    await (_db.update(_db.users)..where((t) => t.id.equals(user.id)))
-        .write(UsersCompanion(
-      email: Value(email),
-      role: Value(roleStr),
-      displayName: Value(displayName),
-      firstName: Value(firstName),
-      lastName: Value(lastName),
-      profileImage: Value(profileImage),
-      department: Value(department),
-      designation: Value(designationName),
-      organization: Value(orgName),
-      userDataJson: Value(userDataJsonStr),
-    ));
+    await (_db.update(_db.users)..where((t) => t.id.equals(user.id))).write(
+      UsersCompanion(
+        email: Value(email),
+        role: const Value(roleStr),
+        displayName: Value(displayName),
+        firstName: Value(firstName),
+        lastName: Value(lastName),
+        profileImage: Value(profileImage),
+        department: Value(department),
+        designation: Value(designationName),
+        organization: Value(orgName),
+        userDataJson: Value(userDataJsonStr),
+      ),
+    );
 
     await _prefs.setString(_sessionKey, user.id);
     await _prefs.setString(_tokenKey, cleanToken);
@@ -220,12 +218,15 @@ class AuthRepository {
     required String displayName,
     required AuthRole role,
   }) async {
-    final existing = await (_db.select(_db.users)
-          ..where((t) => t.email.equals(email)))
-        .getSingleOrNull();
+    final existing = await (_db.select(
+      _db.users,
+    )..where((t) => t.email.equals(email))).getSingleOrNull();
 
-    final user = existing ??
-        await _db.into(_db.users).insertReturning(
+    final user =
+        existing ??
+        await _db
+            .into(_db.users)
+            .insertReturning(
               UsersCompanion.insert(
                 id: const Uuid().v4(),
                 email: email,
@@ -260,23 +261,22 @@ class AuthRepository {
 
   Future<void> resetTestAccount() async {
     await signOut();
-    await (_db.delete(_db.users)
-          ..where((t) => t.email.isIn(const [_devEmail, _adminEmail])))
-        .go();
+    await (_db.delete(
+      _db.users,
+    )..where((t) => t.email.isIn(const [_devEmail, _adminEmail]))).go();
   }
 
   /// Local registered users for admin testing (no remote directory yet).
   Stream<List<User>> watchRegisteredUsers() {
-    return (_db.select(_db.users)
-          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
-        .watch();
+    return (_db.select(
+      _db.users,
+    )..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).watch();
   }
 
   AuthUser _toLocalUser(User row, {String? token}) {
     final isAdminLocal =
         AppEnv.allowLocalAdminTesting && row.email == _adminEmail;
-    final rowRole = row.role == 'admin' ? AuthRole.admin : AuthRole.user;
-    final role = isAdminLocal ? AuthRole.admin : rowRole;
+    final role = isAdminLocal ? AuthRole.admin : AuthRole.user;
     return AuthUser(
       id: row.id,
       email: row.email,
@@ -291,7 +291,8 @@ class AuthRepository {
       userDataJson: row.userDataJson,
       firebaseUid: row.firebaseUid,
       role: role,
-      isLocalDev: row.authProvider == 'local' ||
+      isLocalDev:
+          row.authProvider == 'local' ||
           row.email == _devEmail ||
           row.email == _adminEmail,
     );

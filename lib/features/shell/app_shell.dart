@@ -39,7 +39,6 @@ class AppShell extends ConsumerWidget {
     ];
   }
 
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -63,7 +62,8 @@ class AppShell extends ConsumerWidget {
             duration: const Duration(milliseconds: 160),
             curve: Curves.easeOutCubic,
             width: width,
-            color: extras?.sidebarBg ?? theme.colorScheme.surfaceContainerHighest,
+            color:
+                extras?.sidebarBg ?? theme.colorScheme.surfaceContainerHighest,
             child: Column(
               children: [
                 Padding(
@@ -150,7 +150,8 @@ class AppShell extends ConsumerWidget {
                           children: [
                             Tooltip(
                               message: auth.user?.displayName ?? 'Account',
-                              child: auth.user?.profileImage != null &&
+                              child:
+                                  auth.user?.profileImage != null &&
                                       auth.user!.profileImage!.isNotEmpty
                                   ? CircleAvatar(
                                       radius: 14,
@@ -160,20 +161,19 @@ class AppShell extends ConsumerWidget {
                                     )
                                   : CircleAvatar(
                                       radius: 14,
-                                      backgroundColor: theme
-                                          .colorScheme.primary
+                                      backgroundColor: theme.colorScheme.primary
                                           .withValues(alpha: 0.15),
                                       child: Text(
                                         (auth.user?.displayName ?? 'A')
                                                 .isNotEmpty
-                                            ? auth.user!.displayName[0]
-                                                .toUpperCase()
+                                            ? (auth.user?.displayName ?? 'A')[0]
+                                                  .toUpperCase()
                                             : 'A',
                                         style: theme.textTheme.labelMedium
                                             ?.copyWith(
-                                          color: theme.colorScheme.primary,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                              color: theme.colorScheme.primary,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                       ),
                                     ),
                             ),
@@ -212,10 +212,9 @@ class AppShell extends ConsumerWidget {
                                 backgroundColor: theme.colorScheme.primary
                                     .withValues(alpha: 0.15),
                                 child: Text(
-                                  (auth.user?.displayName ?? 'A')
-                                          .isNotEmpty
-                                      ? auth.user!.displayName[0]
-                                          .toUpperCase()
+                                  (auth.user?.displayName ?? 'A').isNotEmpty
+                                      ? (auth.user?.displayName ?? 'A')[0]
+                                            .toUpperCase()
                                       : 'A',
                                   style: theme.textTheme.labelMedium?.copyWith(
                                     color: theme.colorScheme.primary,
@@ -245,15 +244,15 @@ class AppShell extends ConsumerWidget {
                                           auth.user!.organization!,
                                         if (auth.user?.designation != null)
                                           auth.user!.designation!
-                                        else if (auth.user?.rawRoleType !=
-                                            null)
+                                        else if (auth.user?.rawRoleType != null)
                                           auth.user!.rawRoleType!,
                                       ].join(' • '),
                                       style: theme.textTheme.labelSmall
                                           ?.copyWith(
-                                        color: theme
-                                            .colorScheme.onSurfaceVariant,
-                                      ),
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                 ],
@@ -283,7 +282,6 @@ class AppShell extends ConsumerWidget {
                   title: title,
                   status: status,
                   themeMode: themeMode,
-                  isDevAdmin: auth.user?.isDevAdmin == true,
                   email: auth.user?.email ?? '',
                   onToggleTheme: () =>
                       ref.read(themeModeProvider.notifier).toggle(),
@@ -297,9 +295,7 @@ class AppShell extends ConsumerWidget {
                 ),
                 Divider(height: 1, color: theme.dividerColor),
                 Expanded(
-                  child: ClipRect(
-                    child: RepaintBoundary(child: child),
-                  ),
+                  child: ClipRect(child: RepaintBoundary(child: child)),
                 ),
               ],
             ),
@@ -339,7 +335,6 @@ class _DesktopTopBar extends StatelessWidget {
     required this.title,
     required this.status,
     required this.themeMode,
-    required this.isDevAdmin,
     required this.email,
     required this.onToggleTheme,
     required this.onSignOut,
@@ -348,7 +343,6 @@ class _DesktopTopBar extends StatelessWidget {
   final String title;
   final TrackingStatus status;
   final ThemeMode themeMode;
-  final bool isDevAdmin;
   final String email;
   final VoidCallback onToggleTheme;
   final Future<void> Function() onSignOut;
@@ -387,12 +381,10 @@ class _DesktopTopBar extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: accent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: accent.withValues(alpha: 0.28),
-                    ),
+                    border: Border.all(color: accent.withValues(alpha: 0.28)),
                   ),
                   child: Text(
-                    isDevAdmin ? 'Development Admin' : 'Development',
+                    'Development',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: accent,
                       fontWeight: FontWeight.w700,
@@ -409,8 +401,9 @@ class _DesktopTopBar extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: theme.dividerColor),
-                  color: theme.colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.55),
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.55,
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -441,10 +434,7 @@ class _DesktopTopBar extends StatelessWidget {
                 },
                 itemBuilder: (context) => [
                   PopupMenuItem(enabled: false, child: Text(email)),
-                  const PopupMenuItem(
-                    value: 'logout',
-                    child: Text('Sign out'),
-                  ),
+                  const PopupMenuItem(value: 'logout', child: Text('Sign out')),
                 ],
                 child: const Padding(
                   padding: EdgeInsets.all(6),
@@ -534,8 +524,9 @@ class _NavTile extends StatelessWidget {
                           item.label,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: fg,
-                            fontWeight:
-                                selected ? FontWeight.w600 : FontWeight.w500,
+                            fontWeight: selected
+                                ? FontWeight.w600
+                                : FontWeight.w500,
                           ),
                         ),
                       ),

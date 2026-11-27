@@ -27,7 +27,8 @@ class PortalLoginCallback {
   bool get isCancelled {
     final s = status?.trim().toLowerCase();
     if (s == 'cancelled' || s == 'cancel') return true;
-    if (message != null && message!.toLowerCase().contains('cancel')) return true;
+    if (message != null && message!.toLowerCase().contains('cancel'))
+      return true;
     return false;
   }
 
@@ -61,13 +62,22 @@ PortalLoginCallback? parsePortalLoginCallback(Uri uri) {
     return null;
   }
 
-  final status = firstValue(
-    const ['status', 'state', 'result', 'code', 'error'],
-  );
+  final status = firstValue(const [
+    'status',
+    'state',
+    'result',
+    'code',
+    'error',
+  ]);
 
-  final message = firstValue(
-    const ['message', 'msg', 'error_description', 'error_message', 'reason', 'details'],
-  );
+  final message = firstValue(const [
+    'message',
+    'msg',
+    'error_description',
+    'error_message',
+    'reason',
+    'details',
+  ]);
 
   Map<String, dynamic>? tryParseJsonMap(String input) {
     final trimmed = input.trim();
@@ -92,9 +102,14 @@ PortalLoginCallback? parsePortalLoginCallback(Uri uri) {
   }
 
   Map<String, dynamic>? userData;
-  final rawUserData = firstValue(
-    const ['user_data', 'userData', 'user', 'data', 'payload', 'profile'],
-  );
+  final rawUserData = firstValue(const [
+    'user_data',
+    'userData',
+    'user',
+    'data',
+    'payload',
+    'profile',
+  ]);
   if (rawUserData != null) {
     userData = tryParseJsonMap(rawUserData);
     if (userData == null && rawUserData != '[object Object]') {
@@ -102,45 +117,55 @@ PortalLoginCallback? parsePortalLoginCallback(Uri uri) {
     }
   }
 
-  final email = userData?['email']?.toString() ??
+  final email =
+      userData?['email']?.toString() ??
       userData?['user_email']?.toString() ??
       userData?['email_address']?.toString() ??
       firstValue(const ['email', 'user_email', 'email_address']);
 
-  final firstName = userData?['first_name']?.toString() ??
+  final firstName =
+      userData?['first_name']?.toString() ??
       userData?['firstName']?.toString() ??
       firstValue(const ['first_name', 'firstName']);
 
-  final lastName = userData?['last_name']?.toString() ??
+  final lastName =
+      userData?['last_name']?.toString() ??
       userData?['lastName']?.toString() ??
       firstValue(const ['last_name', 'lastName']);
 
-  final name = userData?['name']?.toString() ??
+  final name =
+      userData?['name']?.toString() ??
       userData?['display_name']?.toString() ??
       userData?['displayName']?.toString() ??
       userData?['full_name']?.toString() ??
       userData?['fullName']?.toString() ??
-      firstValue(
-        const ['name', 'display_name', 'displayName', 'full_name', 'fullName'],
-      );
+      firstValue(const [
+        'name',
+        'display_name',
+        'displayName',
+        'full_name',
+        'fullName',
+      ]);
 
-  final roleType = firstValue(
-        const ['role_type', 'roleType', 'role', 'user_role'],
-      ) ??
+  final roleType =
+      firstValue(const ['role_type', 'roleType', 'role', 'user_role']) ??
       userData?['role_type']?.toString() ??
       userData?['roleType']?.toString() ??
       userData?['role']?.toString() ??
       userData?['user_role']?.toString();
 
-  final department = userData?['department']?.toString() ??
+  final department =
+      userData?['department']?.toString() ??
       userData?['sub_department']?.toString() ??
       firstValue(const ['department', 'sub_department']);
 
-  final designation = userData?['designation']?.toString() ??
+  final designation =
+      userData?['designation']?.toString() ??
       userData?['designation_name']?.toString() ??
       firstValue(const ['designation', 'designation_name']);
 
-  final organization = userData?['organization']?.toString() ??
+  final organization =
+      userData?['organization']?.toString() ??
       userData?['org_name']?.toString() ??
       firstValue(const ['organization', 'org_name']);
 
@@ -151,21 +176,22 @@ PortalLoginCallback? parsePortalLoginCallback(Uri uri) {
     roleType: userData?['user_role'] is Map
         ? (userData?['user_role'] as Map)['role_type']?.toString()
         : firstValue(const ['role_type', 'roleType', 'role']),
-    userData: userData ?? (
-      parameters.keys.isNotEmpty &&
-      (parameters['email'] != null ||
-       parameters['first_name'] != null ||
-       parameters['name'] != null)
-        ? <String, dynamic>{
-            if (email != null) 'email': email,
-            if (firstName != null) 'first_name': firstName,
-            if (lastName != null) 'last_name': lastName,
-            if (name != null) 'name': name,
-            if (department != null) 'department': department,
-            if (designation != null) 'designation': designation,
-            if (organization != null) 'organization': organization,
-          }
-        : null),
+    userData:
+        userData ??
+        (parameters.keys.isNotEmpty &&
+                (parameters['email'] != null ||
+                    parameters['first_name'] != null ||
+                    parameters['name'] != null)
+            ? <String, dynamic>{
+                if (email != null) 'email': email,
+                if (firstName != null) 'first_name': firstName,
+                if (lastName != null) 'last_name': lastName,
+                if (name != null) 'name': name,
+                if (department != null) 'department': department,
+                if (designation != null) 'designation': designation,
+                if (organization != null) 'organization': organization,
+              }
+            : null),
   );
 }
 
@@ -184,6 +210,9 @@ class DeepLinkService {
 
   static const MethodChannel _deeplinkChannel = MethodChannel(
     'com.witrack.desktop/deeplink',
+  );
+  static const MethodChannel _macWindowChannel = MethodChannel(
+    'com.witrack.desktop/window_activation',
   );
 
   Future<void> init() async {
@@ -285,8 +314,10 @@ class DeepLinkService {
     debugPrint('Host: ${uri.host}');
     debugPrint('Path: ${uri.path}');
     debugPrint('Status parameter: $statusStr');
-    debugPrint('Message parameter: $messageStr');
-    debugPrint('Token parameter exists: ${token != null && token.trim().isNotEmpty}');
+    if (!Platform.isMacOS) debugPrint('Message parameter: $messageStr');
+    debugPrint(
+      'Token parameter exists: ${token != null && token.trim().isNotEmpty}',
+    );
     debugPrint('Token length: ${token?.trim().length ?? 0}');
     debugPrint('UserData parameter exists: ${userDataStr != null}');
     debugPrint(
@@ -321,11 +352,19 @@ class DeepLinkService {
     _lastCallbackFingerprint = fingerprint;
     _lastCallbackAt = now;
 
+    if (Platform.isMacOS) {
+      unawaited(_activateMacWindow());
+    }
+
     if (callback.isCancelled) {
-      debugPrint('Portal authentication was cancelled: ${callback.message}');
+      debugPrint(
+        Platform.isMacOS
+            ? 'Portal authentication was cancelled.'
+            : 'Portal authentication was cancelled: ${callback.message}',
+      );
     } else if (!callback.hasToken) {
       debugPrint('Authentication token is missing from callback.');
-    } else if (callback.userData != null) {
+    } else if (callback.userData != null && !Platform.isMacOS) {
       final userDataMap = callback.userData!;
       debugPrint('========== USER DATA RECEIVED ==========');
       debugPrint('User ID: ${userDataMap['id']}');
@@ -333,12 +372,20 @@ class DeepLinkService {
       debugPrint('First Name: ${userDataMap['first_name']}');
       debugPrint('Last Name: ${userDataMap['last_name']}');
       final userRole = userDataMap['user_role'];
-      debugPrint('Role Name: ${userRole is Map ? userRole['role_name'] : null}');
-      debugPrint('Role Type: ${userRole is Map ? userRole['role_type'] : null}');
+      debugPrint(
+        'Role Name: ${userRole is Map ? userRole['role_name'] : null}',
+      );
+      debugPrint(
+        'Role Type: ${userRole is Map ? userRole['role_type'] : null}',
+      );
       final organization = userDataMap['organization'];
       final designation = userDataMap['designation'];
-      debugPrint('Organization: ${organization is Map ? organization['name'] : organization}');
-      debugPrint('Designation: ${designation is Map ? designation['designation_name'] : designation}');
+      debugPrint(
+        'Organization: ${organization is Map ? organization['name'] : organization}',
+      );
+      debugPrint(
+        'Designation: ${designation is Map ? designation['designation_name'] : designation}',
+      );
       debugPrint('========================================');
       debugPrint('Token length: ${callback.token!.trim().length}');
       debugPrint('Role type received: ${callback.roleType ?? '(missing)'}');
@@ -346,6 +393,14 @@ class DeepLinkService {
 
     _pendingCallbacks.add(callback);
     unawaited(_deliverCallbacks());
+  }
+
+  Future<void> _activateMacWindow() async {
+    try {
+      await _macWindowChannel.invokeMethod<void>('activate');
+    } catch (error) {
+      debugPrint('Could not activate macOS window: ${error.runtimeType}');
+    }
   }
 
   Future<void> _deliverCallbacks() async {

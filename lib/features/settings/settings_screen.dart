@@ -37,8 +37,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final asyncSettings = ref.watch(settingsProvider);
-    final isAdmin =
-        ref.watch(authControllerProvider).user?.isAdmin == true;
     final sections = <String>[
       'General',
       'Tracking',
@@ -80,11 +78,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
                   error: (e, _) => Text('Failed to load settings: $e'),
-                  data: (settings) => _SettingsBody(
-                    section: _section,
-                    settings: settings,
-                    isAdmin: isAdmin,
-                  ),
+                  data: (settings) =>
+                      _SettingsBody(section: _section, settings: settings),
                 ),
               ),
             ],
@@ -96,15 +91,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 }
 
 class _SettingsBody extends ConsumerStatefulWidget {
-  const _SettingsBody({
-    required this.section,
-    required this.settings,
-    required this.isAdmin,
-  });
+  const _SettingsBody({required this.section, required this.settings});
 
   final String section;
   final TrackingSettings settings;
-  final bool isAdmin;
 
   @override
   ConsumerState<_SettingsBody> createState() => _SettingsBodyState();
@@ -133,17 +123,22 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
     try {
       final user = ref.read(authControllerProvider).user;
       if (user?.token?.isNotEmpty != true) {
-        throw StateError('Sign in through the organization portal to save preferences to the server.');
+        throw StateError(
+          'Sign in through the organization portal to save preferences to the server.',
+        );
       }
-      await ref.read(settingsRepositoryProvider).saveRemote(
-            _draft,
-            token: user!.token!,
-          );
+      await ref
+          .read(settingsRepositoryProvider)
+          .saveRemote(_draft, token: user!.token!);
       await ref.read(settingsRepositoryProvider).save(_draft);
       ref.invalidate(settingsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tracking preferences saved to the server and this device')),
+          const SnackBar(
+            content: Text(
+              'Tracking preferences saved to the server and this device',
+            ),
+          ),
         );
       }
     } catch (error) {
@@ -164,7 +159,6 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
     final diagnostics = ref.watch(diagnosticsProvider);
     final collapsed = ref.watch(sidebarCollapsedProvider);
     final section = widget.section;
-    final isAdmin = widget.isAdmin;
 
     return WitrackSurface(
       child: Column(
@@ -196,8 +190,9 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
               contentPadding: EdgeInsets.zero,
               title: const Text('Screenshots enabled'),
               value: _draft.screenshotEnabled,
-              onChanged: (v) =>
-                  setState(() => _draft = _draft.copyWith(screenshotEnabled: v)),
+              onChanged: (v) => setState(
+                () => _draft = _draft.copyWith(screenshotEnabled: v),
+              ),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -206,13 +201,13 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
             ),
             Slider(
               // Policy: 1, 5, 10, 15 minutes (admin/testing can use 1).
-              value: _nearestShotInterval(
-                _draft.screenshotIntervalMinutes,
-              ).toDouble(),
+              value: _nearestShotInterval(_draft.screenshotIntervalMinutes)
+                  .toDouble(),
               min: 1,
               max: 15,
               divisions: 14,
-              label: '${_nearestShotInterval(_draft.screenshotIntervalMinutes)} min',
+              label:
+                  '${_nearestShotInterval(_draft.screenshotIntervalMinutes)} min',
               onChanged: (v) => setState(
                 () => _draft = _draft.copyWith(
                   screenshotIntervalMinutes: _nearestShotInterval(v.round()),
@@ -231,8 +226,7 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
               divisions: 29,
               label: '${_draft.idleThresholdMinutes}',
               onChanged: (v) => setState(
-                () => _draft =
-                    _draft.copyWith(idleThresholdMinutes: v.round()),
+                () => _draft = _draft.copyWith(idleThresholdMinutes: v.round()),
               ),
             ),
             SwitchListTile(

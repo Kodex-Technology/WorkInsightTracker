@@ -6,7 +6,6 @@ import 'package:witrack/core/constants/app_constants.dart';
 import 'package:witrack/core/widgets/witrack_mark.dart';
 import 'package:witrack/features/auth/auth_controller.dart';
 
-
 class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
 
@@ -19,26 +18,21 @@ class LoginScreen extends ConsumerWidget {
 
     ref.listen(authControllerProvider, (previous, next) {
       if (!next.isAuthenticated) return;
-      // Let GoRouter redirect pick admin vs dashboard/onboarding.
-      if (next.user?.isAdmin == true) {
-        context.go('/app/admin');
-      } else {
-        context.go('/app/dashboard');
-      }
+      context.go('/app/dashboard');
     });
 
     return Scaffold(
-     body: Container(
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: const AssetImage('assets/images/login_background.jpg'),
-          fit: BoxFit.cover,
-          colorFilter: ColorFilter.mode(
-            Colors.black.withValues(alpha: 0.45),
-            BlendMode.darken,
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: const AssetImage('assets/images/login_background.jpg'),
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              Colors.black.withValues(alpha: 0.45),
+              BlendMode.darken,
+            ),
           ),
         ),
-      ),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -72,99 +66,106 @@ class LoginScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               // Left Side: Brand Showcase Pane
-                            Expanded(
-                              flex: 11,
-                              child: Container(
-                                padding: const EdgeInsets.all(40),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      const Color(0xFF0C1E2E).withValues(alpha: 1),
-                                      const Color(0xFF071521).withValues(alpha: 0.8),
+                              Expanded(
+                                flex: 11,
+                                child: Container(
+                                  padding: const EdgeInsets.all(40),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        const Color(0xFF0C1E2E)
+                                            .withValues(alpha: 1),
+                                        const Color(0xFF071521)
+                                            .withValues(alpha: 0.8),
+                                      ],
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const WitrackMark(size: 64),
+                                      const SizedBox(height: 24),
+                                      Text(
+                                        AppConstants.brandPrimary,
+                                        style: theme.textTheme.headlineSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: -0.5,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        AppConstants.brandSecondary
+                                            .toUpperCase(),
+                                        style: theme.textTheme.labelMedium
+                                            ?.copyWith(
+                                              color: primaryAccent,
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: 1.8,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'Work smarter. Track clearly.',
+                                        style: theme.textTheme.bodyLarge
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w500,
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 36),
+                                      _buildInfoRow(
+                                        context,
+                                        Icons.verified_user_rounded,
+                                        'Privacy-First Tracking',
+                                        'No keystrokes, passwords, or hidden surveillance.',
+                                      ),
+                                      const SizedBox(height: 20),
+                                      _buildInfoRow(
+                                        context,
+                                        Icons.offline_bolt_rounded,
+                                        'Offline-First Drift',
+                                        'Local SQLite persistence with outbox reliability.',
+                                      ),
+                                      const SizedBox(height: 20),
+                                      _buildInfoRow(
+                                        context,
+                                        Icons.desktop_windows_rounded,
+                                        'Windows Native Engine',
+                                        'High-performance C++ lifecycle & capture.',
+                                      ),
                                     ],
                                   ),
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const WitrackMark(size: 64),
-                                    const SizedBox(height: 24),
-                                    Text(
-                                      AppConstants.brandPrimary,
-                                      style: theme.textTheme.headlineSmall
-                                          ?.copyWith(
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: -0.5,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      AppConstants.brandSecondary.toUpperCase(),
-                                      style: theme.textTheme.labelMedium
-                                          ?.copyWith(
-                                        color: primaryAccent,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 1.8,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'Work smarter. Track clearly.',
-                                      style: theme.textTheme.bodyLarge
-                                          ?.copyWith(
-                                        fontWeight: FontWeight.w500,
-                                        color: theme.colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 36),
-                                    _buildInfoRow(
-                                      context,
-                                      Icons.verified_user_rounded,
-                                      'Privacy-First Tracking',
-                                      'No keystrokes, passwords, or hidden surveillance.',
-                                    ),
-                                    const SizedBox(height: 20),
-                                    _buildInfoRow(
-                                      context,
-                                      Icons.offline_bolt_rounded,
-                                      'Offline-First Drift',
-                                      'Local SQLite persistence with outbox reliability.',
-                                    ),
-                                    const SizedBox(height: 20),
-                                    _buildInfoRow(
-                                      context,
-                                      Icons.desktop_windows_rounded,
-                                      'Windows Native Engine',
-                                      'High-performance C++ lifecycle & capture.',
-                                    ),
-                                  ],
-                                ),
                               ),
-                            ),
-                            // Right Side: Action Form Pane
-                            Expanded(
-                              flex: 12,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF071521).withValues(alpha: 0.25),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(40),
-                                  child: _buildLoginForm(
-                                    context,
-                                    ref,
-                                    auth,
-                                    primaryAccent,
+                              // Right Side: Action Form Pane
+                              Expanded(
+                                flex: 12,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF071521)
+                                        .withValues(alpha: 0.25),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(40),
+                                    child: _buildLoginForm(
+                                      context,
+                                      ref,
+                                      auth,
+                                      primaryAccent,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      );
+                            ],
+                          ),
+                        );
                       } else {
                         // Stacked layout for narrow screens
                         return Padding(
@@ -192,7 +193,12 @@ class LoginScreen extends ConsumerWidget {
                                 ),
                               ),
                               const SizedBox(height: 32),
-                              _buildLoginForm(context, ref, auth, primaryAccent),
+                              _buildLoginForm(
+                                context,
+                                ref,
+                                auth,
+                                primaryAccent,
+                              ),
                             ],
                           ),
                         );
@@ -209,7 +215,11 @@ class LoginScreen extends ConsumerWidget {
   }
 
   Widget _buildInfoRow(
-      BuildContext context, IconData icon, String title, String subtitle) {
+    BuildContext context,
+    IconData icon,
+    String title,
+    String subtitle,
+  ) {
     final theme = Theme.of(context);
     final primaryAccent = theme.colorScheme.primary;
 
@@ -251,10 +261,13 @@ class LoginScreen extends ConsumerWidget {
   }
 
   Widget _buildLoginForm(
-      BuildContext context, WidgetRef ref, AuthState auth, Color primaryAccent) {
+    BuildContext context,
+    WidgetRef ref,
+    AuthState auth,
+    Color primaryAccent,
+  ) {
     final theme = Theme.of(context);
 
-   
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -286,8 +299,8 @@ class LoginScreen extends ConsumerWidget {
                 onPressed: auth.isLoading
                     ? null
                     : () => ref
-                        .read(authControllerProvider.notifier)
-                        .signInWithPortal(),
+                          .read(authControllerProvider.notifier)
+                          .signInWithPortal(),
                 icon: auth.isLoading
                     ? const SizedBox(
                         width: 18,
@@ -300,10 +313,7 @@ class LoginScreen extends ConsumerWidget {
                     : const Icon(Icons.arrow_forward_rounded, size: 18),
                 label: const Text(
                   'Login With Portal',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -400,8 +410,9 @@ class LoginScreen extends ConsumerWidget {
               child: Text(
                 'Encrypted Local Session · v1.0.0',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant
-                      .withValues(alpha: 0.8),
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.8,
+                  ),
                   fontSize: 12,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -411,8 +422,5 @@ class LoginScreen extends ConsumerWidget {
         ),
       ],
     );
-
   }
 }
-
-
