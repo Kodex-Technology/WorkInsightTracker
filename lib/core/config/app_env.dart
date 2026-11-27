@@ -9,10 +9,10 @@ enum AuthRole { user, admin, superAdmin }
 
 extension AuthRoleX on AuthRole {
   String get wireName => switch (this) {
-        AuthRole.user => 'user',
-        AuthRole.admin => 'admin',
-        AuthRole.superAdmin => 'super_admin',
-      };
+    AuthRole.user => 'user',
+    AuthRole.admin => 'admin',
+    AuthRole.superAdmin => 'super_admin',
+  };
 
   bool get isAdmin => this == AuthRole.admin || this == AuthRole.superAdmin;
 }
@@ -75,20 +75,20 @@ abstract final class AppEnv {
   );
 
   static String get appName => _value(
-        'APP_NAME',
-        const String.fromEnvironment(
-          'APP_NAME',
-          defaultValue: 'WorkInsight Tracker',
-        ),
-      );
+    'APP_NAME',
+    const String.fromEnvironment(
+      'APP_NAME',
+      defaultValue: 'WorkInsight Tracker',
+    ),
+  );
 
   static String get apiBaseUrl => _value(
-        'API_BASE_URL',
-        const String.fromEnvironment(
-          'API_BASE_URL',
-          defaultValue: 'http://127.0.0.1:8787/api/',
-        ),
-      );
+    'API_BASE_URL',
+    const String.fromEnvironment(
+      'API_BASE_URL',
+      defaultValue: 'http://127.0.0.1:8787/api/',
+    ),
+  );
 
   /// Resolves an API endpoint against the configured server base, appending
   /// `/api/` exactly once when the configured URL is only an origin.
@@ -125,6 +125,5 @@ abstract final class AppEnv {
   /// Google / Firebase auth deferred — not active for now.
   static bool get enableGoogleAuth => false;
 
-  static String get modeLabel =>
-      isDevelopment ? 'Development' : 'Production';
+  static String get modeLabel => isDevelopment ? 'Development' : 'Production';
 }

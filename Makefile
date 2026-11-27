@@ -31,7 +31,7 @@ cleare:
 clean: cleare
 
 run-mac:
-	$(FLUTTER) run -d macos
+	$(FLUTTER) run -d macos $(if $(wildcard .env),--dart-define-from-file=.env)
 
 create-dmg:
 	$(FLUTTER) build macos --release
