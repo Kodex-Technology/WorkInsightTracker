@@ -15,8 +15,10 @@
 
 ## Storage
 
-- App support directory `screenshots/`
-- Encrypt at rest; DB holds path, hash, display id, takenAt, sessionId
+- Upload capture bytes through the authenticated Laravel API to private S3.
+- S3 object key: `tracker-screenshots/YYYY-MM-DD/{user_id}/{uuid}.png`.
+- Laravel requests S3 server-side AES-256 encryption; short-lived signed read URLs come from the listing API.
+- Desktop keeps screenshot metadata for tracking/productivity, not new image files.
 
 ## Performance
 

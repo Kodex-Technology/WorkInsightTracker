@@ -145,25 +145,23 @@ class ScreenshotStore {
     required int height,
     required Uint8List pngBytes,
     bool isTestCapture = false,
+    bool persistImage = true,
     DateTime? takenAt,
     Map<String, Object?>? metadata,
   }) async {
-    final key = await _aesKey();
-    final iv = enc.IV.fromSecureRandom(16);
-    const mode = 'cbc';
-    final encrypted =
-        _encrypter(key, mode: mode).encryptBytes(pngBytes, iv: iv);
-
     final id = _uuid.v4();
-    final dir = await _dir();
-    final file = File(p.join(dir.path, '$id.bin'));
-    final payload = jsonEncode({
-      'v': 2,
-      'mode': mode,
-      'iv': iv.base64,
-      'data': encrypted.base64,
-    });
-    await file.writeAsString(payload, flush: true);
+    var filePath = '';
+    if (persistImage) {
+      final key = await _aesKey();
+      final iv = enc.IV.fromSecureRandom(16);
+      const mode = 'cbc';
+      final encrypted = _encrypter(key, mode: mode).encryptBytes(pngBytes, iv: iv);
+      final dir = await _dir();
+      final file = File(p.join(dir.path, '$id.bin'));
+      final payload = jsonEncode({'v': 2, 'mode': mode, 'iv': iv.base64, 'data': encrypted.base64});
+      await file.writeAsString(payload, flush: true);
+      filePath = file.path;
+    }
 
     final at = (takenAt ?? DateTime.now()).toUtc();
     final localDay = dayKey(at.toLocal());
@@ -177,7 +175,7 @@ class ScreenshotStore {
             takenDay: Value(localDay),
             displayIndex: displayIndex,
             takenAt: at,
-            filePath: file.path,
+            filePath: filePath,
             width: width,
             height: height,
             byteSize: Value(pngBytes.length),
@@ -309,10 +307,10 @@ class ScreenshotStore {
   Future<List<Screenshot>> getPendingUploads() async {
     return (_db.select(_db.screenshots)
           ..where((t) =>
-              t.isTestCapture.equals(false) &
               (t.uploadStatus.isNull() |
-                  t.uploadStatus.equals('pending') |
-                  t.uploadStatus.equals('failed'))))
+                  t.uploadStatus.equals('pending')))
+          ..orderBy([(t) => OrderingTerm.desc(t.takenAt)])
+          ..limit(1))
         .get();
   }
 }

@@ -63,9 +63,22 @@ final screenshotsProvider = StreamProvider<List<Screenshot>>((ref) {
   return ref.watch(screenshotStoreProvider).watchFiltered(filter);
 });
 
+final remoteScreenshotsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final user = ref.watch(authControllerProvider).user;
+  if (user == null || user.token?.isNotEmpty != true) return const [];
+  return ref.watch(trackerApiControllerProvider).listS3Screenshots(
+        user: user,
+      );
+});
+
 final screenshotDaysProvider = FutureProvider<List<String>>((ref) {
-  ref.watch(screenshotsProvider);
-  return ref.watch(screenshotStoreProvider).distinctTakenDays();
+  return ref.watch(remoteScreenshotsProvider.future).then((rows) => rows
+      .map((row) => DateTime.tryParse(row['taken_at']?.toString() ?? '')?.toLocal())
+      .whereType<DateTime>()
+      .map(ScreenshotStore.dayKey)
+      .toSet()
+      .toList()
+    ..sort((a, b) => b.compareTo(a)));
 });
 
 final screenshotProjectsProvider = StreamProvider<List<Project>>((ref) async* {
@@ -101,12 +114,65 @@ final screenshotBytesProvider =
   return ref.read(screenshotStoreProvider).readDecrypted(row);
 });
 
+final remoteScreenshotBytesProvider =
+    FutureProvider.family<Uint8List?, String>((ref, url) {
+  return ref.read(trackerApiControllerProvider).fetchScreenshotBytes(url);
+});
+
+class _RemoteScreenshotCard extends ConsumerWidget {
+  const _RemoteScreenshotCard({required this.row});
+
+  final Map<String, dynamic> row;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final url = row['url']?.toString();
+    final bytes = url == null ? null : ref.watch(remoteScreenshotBytesProvider(url));
+    final theme = Theme.of(context);
+    final takenAt = DateTime.tryParse(row['taken_at']?.toString() ?? '')?.toLocal();
+    return WitrackSurface(
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: bytes == null
+                  ? const Center(child: Text('Image unavailable'))
+                  : bytes.when(
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (_, _) => const Center(child: Text('Image unavailable')),
+                      data: (data) => data == null
+                          ? const Center(child: Text('Image unavailable'))
+                          : Image.memory(data, fit: BoxFit.cover, width: double.infinity),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            takenAt == null ? 'Unknown time' : DateFormat('MMM d · HH:mm:ss').format(takenAt),
+            style: theme.textTheme.labelLarge,
+          ),
+          Text('Display ${(int.tryParse('${row['display_index']}') ?? 0) + 1}', style: theme.textTheme.bodySmall),
+        ],
+      ),
+    );
+  }
+}
+
 class ScreenshotsScreen extends ConsumerWidget {
   const ScreenshotsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final shots = ref.watch(screenshotsProvider);
+    final shots = ref.watch(remoteScreenshotsProvider);
+    ref.listen<DateTime?>(
+      trackingControllerProvider.select((s) => s.lastScreenshotAt),
+      (previous, next) {
+        if (previous != next) ref.invalidate(remoteScreenshotsProvider);
+      },
+    );
     final filter = ref.watch(screenshotFilterProvider);
     final days = ref.watch(screenshotDaysProvider);
     final projects = ref.watch(screenshotProjectsProvider);
@@ -130,7 +196,7 @@ class ScreenshotsScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Encrypted local captures. Filter by day, project, or task.',
+                      'Screenshots are securely stored in your account.',
                       style: theme.textTheme.bodyMedium,
                     ),
                   ),
@@ -294,7 +360,15 @@ class ScreenshotsScreen extends ConsumerWidget {
                   skipLoadingOnReload: true,
                   skipLoadingOnRefresh: true,
                   data: (rows) {
-                    if (rows.isEmpty) {
+                    final visibleRows = filter.day == null
+                        ? rows
+                        : rows.where((row) {
+                            final at = DateTime.tryParse(
+                              row['taken_at']?.toString() ?? '',
+                            )?.toLocal();
+                            return at != null && ScreenshotStore.dayKey(at) == filter.day;
+                          }).toList();
+                    if (visibleRows.isEmpty) {
                       return WitrackSurface(
                         child: Center(
                           child: Text(
@@ -305,14 +379,8 @@ class ScreenshotsScreen extends ConsumerWidget {
                         ),
                       );
                     }
-                    final scores = rows
-                        .map(
-                          (r) =>
-                              ScreenshotProductivity.tryParse(r.metadataJson),
-                        )
-                        .toList();
-                    final avg = ScreenshotProductivity.averagePercent(scores);
-                    final scored = scores.whereType<ScreenshotProductivity>();
+                    final scored = <ScreenshotProductivity>[];
+                    final avg = 0.0;
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -336,9 +404,9 @@ class ScreenshotsScreen extends ConsumerWidget {
                               crossAxisSpacing: 14,
                               childAspectRatio: 0.92,
                             ),
-                            itemCount: rows.length,
+                            itemCount: visibleRows.length,
                             itemBuilder: (context, index) {
-                              return _ScreenshotCard(row: rows[index]);
+                              return _RemoteScreenshotCard(row: visibleRows[index]);
                             },
                           ),
                         ),

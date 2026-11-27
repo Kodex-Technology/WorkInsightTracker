@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:developer' as developer;
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
@@ -94,71 +94,84 @@ class TrackerApiController {
     required String sessionId,
     required DateTime takenAt,
     required String takenDay,
-    required String filePath,
+    required Uint8List pngBytes,
+    int displayIndex = 0,
   }) async {
-    if (user.token?.isNotEmpty != true) return null;
-
-    final file = File(filePath);
-    if (!await file.exists()) {
-      throw Exception('Screenshot file not found at $filePath');
-    }
-    final fileBytes = await file.readAsBytes();
-
-    // 1. Request presigned upload URL from backend
-    final metaUri = AppEnv.apiUri('v1/screenshots/meta');
-    final userData = _userData(user);
-    final backendUserId = userData['employee_id_tracker_activity'] ??
-        userData['attendance_user_id'] ??
-        userData['id'] ??
-        user.id;
-
-    final metaPayload = <String, Object?>{
-      'screenshotId': screenshotId,
-      'sessionId': sessionId,
-      'takenAt': takenAt.toUtc().toIso8601String(),
-      'takenDay': takenDay,
-      'backendUserId': backendUserId,
-    };
-
-    final metaResponse = await http.post(
-      metaUri,
-      headers: {
-        ..._headers(user),
-        'Content-Type': 'application/json',
-        'X-Backend-User-Id': '$backendUserId',
-      },
-      body: jsonEncode(metaPayload),
-    );
-
-    if (metaResponse.statusCode < 200 || metaResponse.statusCode >= 300) {
-      throw Exception('Failed to get presigned URL (${metaResponse.statusCode}): ${metaResponse.body}');
+    if (user.token?.isNotEmpty != true) {
+      // ignore: avoid_print
+      print(
+        '[witrack.screenshots] Upload skipped: signed-in user has no backend token.',
+      );
+      developer.log(
+        'S3 upload skipped: signed-in account has no backend access token.',
+        name: 'witrack.screenshots',
+      );
+      return null;
     }
 
-    final metaData = jsonDecode(metaResponse.body);
-    if (metaData is! Map) {
-      throw Exception('Invalid presigned metadata response');
+    final request = http.MultipartRequest('POST', AppEnv.apiUri('tracker/screenshots/s3'))
+      ..headers.addAll(_headers(user))
+      ..fields.addAll({
+        'id': screenshotId,
+        'session_id': sessionId,
+        'taken_at': takenAt.toUtc().toIso8601String(),
+        'taken_day': takenDay,
+        'display_index': '$displayIndex',
+      })
+      ..files.add(http.MultipartFile.fromBytes(
+        'screenshot',
+        pngBytes,
+        filename: '$screenshotId.png',
+      ));
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('Screenshot upload failed (${response.statusCode}): ${response.body}');
     }
+    final data = jsonDecode(response.body);
+    return data is Map ? data['object_key']?.toString() : null;
+  }
 
-    final uploadUrl = metaData['uploadUrl']?.toString();
-    final objectKey = metaData['objectKey']?.toString();
-    if (uploadUrl == null || uploadUrl.isEmpty || objectKey == null || objectKey.isEmpty) {
-      throw Exception('Missing uploadUrl or objectKey in response');
-    }
+  Future<List<Map<String, dynamic>>> listS3Screenshots({
+    required AuthUser user,
+    String? from,
+    String? to,
+    String? sessionId,
+    int perPage = 100,
+  }) async {
+    if (user.token?.isNotEmpty != true) return const [];
+    final query = <String, String>{'per_page': '$perPage'};
+    if (from != null) query['from'] = from;
+    if (to != null) query['to'] = to;
+    if (sessionId != null) query['session_id'] = sessionId;
+    final rows = <Map<String, dynamic>>[];
+    var page = 1;
+    var lastPage = 1;
+    do {
+      final listingUri = AppEnv.apiUri('tracker/screenshots').replace(
+        queryParameters: {...query, 'page': '$page'},
+      );
+      final response = await http.get(listingUri, headers: _headers(user));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception(
+          'Screenshot listing failed (${response.statusCode}): ${response.body}',
+        );
+      }
+      final body = jsonDecode(response.body);
+      if (body is! Map || body['data'] is! List) return rows;
+      rows.addAll((body['data'] as List)
+          .whereType<Map>()
+          .map((row) => Map<String, dynamic>.from(row)));
+      lastPage = int.tryParse('${body['last_page']}') ?? page;
+      page++;
+    } while (page <= lastPage);
+    return rows;
+  }
 
-    // 2. Upload encrypted .bin file directly to S3 via PUT
-    final putResponse = await http.put(
-      Uri.parse(uploadUrl),
-      headers: {
-        'Content-Type': 'application/octet-stream',
-      },
-      body: fileBytes,
-    );
-
-    if (putResponse.statusCode < 200 || putResponse.statusCode >= 300) {
-      throw Exception('S3 upload failed (${putResponse.statusCode}): ${putResponse.body}');
-    }
-
-    return objectKey;
+  Future<Uint8List?> fetchScreenshotBytes(String url) async {
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode < 200 || response.statusCode >= 300) return null;
+    return response.bodyBytes;
   }
 
   Future<void> uploadScreenshot({

@@ -93,7 +93,11 @@ abstract final class AppEnv {
   /// Resolves an API endpoint against the configured server base, appending
   /// `/api/` exactly once when the configured URL is only an origin.
   static Uri apiUri(String endpoint) {
-    final configured = Uri.parse(apiBaseUrl.trim());
+    return _uriFromBase(apiBaseUrl, endpoint);
+  }
+
+  static Uri _uriFromBase(String baseUrl, String endpoint) {
+    final configured = Uri.parse(baseUrl.trim());
     final basePath = configured.path.replaceFirst(RegExp(r'/+$'), '');
     final apiPath = basePath.endsWith('/api') ? basePath : '$basePath/api';
     return configured.replace(path: '$apiPath/').resolve(endpoint);

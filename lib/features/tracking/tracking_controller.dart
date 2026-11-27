@@ -113,6 +113,7 @@ class TrackingController extends Notifier<TrackingUiState> {
   Timer? _consoleSummaryTimer;
   Timer? _policyRefreshTimer;
   bool _intervalBusy = false;
+  DateTime? _pendingIntervalAt;
   String? _sessionId;
   String? _attendanceSessionId;
   DateTime? _trackingStartedAt;
@@ -157,16 +158,25 @@ class TrackingController extends Notifier<TrackingUiState> {
     try {
       final store = ref.read(screenshotStoreProvider);
       final pending = await store.getPendingUploads();
+      // ignore: avoid_print
+      print('[witrack.screenshots] Startup retry queue: ${pending.length} screenshot(s)');
       for (final row in pending) {
-        if (row.isTestCapture) continue;
         try {
+          // ignore: avoid_print
+          print('[witrack.screenshots] Retrying pending screenshot ${row.id}');
+          final pngBytes = await store.readDecrypted(row);
+          if (pngBytes == null || pngBytes.isEmpty) {
+            developer.log('Skipping unreadable pending screenshot ${row.id}', name: 'witrack.screenshots');
+            continue;
+          }
           final objectKey = await ref.read(trackerApiControllerProvider).uploadScreenshotToS3(
                 user: user,
                 screenshotId: row.id,
                 sessionId: row.sessionId,
                 takenAt: row.takenAt,
                 takenDay: row.takenDay ?? ScreenshotStore.dayKey(row.takenAt.toLocal()),
-                filePath: row.filePath,
+                pngBytes: pngBytes,
+                displayIndex: row.displayIndex,
               );
           if (objectKey != null) {
             await store.updateUploadStatus(
@@ -177,6 +187,8 @@ class TrackingController extends Notifier<TrackingUiState> {
             );
           }
         } catch (e) {
+          // ignore: avoid_print
+          print('[witrack.screenshots] Pending upload failed ${row.id}: $e');
           developer.log('Pending screenshot S3 upload failed for ${row.id}: $e', name: 'witrack.screenshots');
           await store.updateUploadStatus(
             id: row.id,
@@ -689,7 +701,17 @@ class TrackingController extends Notifier<TrackingUiState> {
           developer.log('Attendance interval API update failed: $error', name: 'witrack.attendance');
         }
       }
-      if (_settings.screenshotEnabled) await _captureNow(isTest: false);
+      if (_settings.screenshotEnabled) {
+        _pendingIntervalAt = intervalAt;
+        try {
+          await _captureNow(isTest: false);
+        } finally {
+          _pendingIntervalAt = null;
+        }
+      }
+      if (_sessionId != null && state.status.isRunning) {
+        await _startIntervalSegment(intervalAt);
+      }
     } finally {
       _intervalBusy = false;
       // Timer.periodic callbacks are not awaited. Schedule the next occurrence
@@ -708,6 +730,57 @@ class TrackingController extends Notifier<TrackingUiState> {
         _consoleSummaryTimer = Timer(interval, _onTrackingInterval);
       }
     }
+  }
+
+  Future<void> _startIntervalSegment(DateTime at) async {
+    final user = ref.read(authControllerProvider).user;
+    final previous = _sessionId;
+    if (user == null || previous == null) return;
+    _clock.tick(at);
+    await ref.read(sessionRepositoryProvider).closeOpenAppUsage(
+          sessionId: previous,
+          at: at,
+        );
+    await ref.read(sessionRepositoryProvider).closeOpenIdleInterval(
+          sessionId: previous,
+          at: at,
+        );
+    final snapshot = _clock.snapshotMs();
+    await ref.read(sessionRepositoryProvider).completeSession(
+          sessionId: previous,
+          activeMs: snapshot['activeMs']!,
+          idleMs: snapshot['idleMs']!,
+          pausedMs: snapshot['pausedMs']!,
+          endedAt: at,
+        );
+    await ref.read(sessionRepositoryProvider).addEvent(
+          sessionId: previous,
+          type: 'interval_completed',
+          at: at,
+        );
+    final nextId = await ref.read(sessionRepositoryProvider).createSession(
+          userId: user.id,
+          workspaceId: state.workspaceId,
+          projectId: state.projectId,
+          taskId: state.taskId,
+          startedAt: at,
+        );
+    _sessionId = nextId;
+    _activeBuckets = 0;
+    _totalBuckets = 0;
+    _productivityWindowStart = at.toUtc();
+    await ref.read(sessionRepositoryProvider).openAppUsage(
+          sessionId: nextId,
+          appName: state.currentApp ?? 'Unknown',
+          at: at,
+        );
+    if (state.status == TrackingStatus.idle) {
+      await ref.read(sessionRepositoryProvider).openIdleInterval(
+            sessionId: nextId,
+            at: at,
+          );
+    }
+    state = state.copyWith(sessionId: nextId);
   }
 
   void _logTrackingSummary() {
@@ -737,8 +810,15 @@ class TrackingController extends Notifier<TrackingUiState> {
     if (!state.status.isRunning) return;
     try {
       final images = await _engine.captureDisplays();
+      // ignore: avoid_print
+      print(
+        '[witrack.screenshots] Capture triggered: session=$sessionId '
+        'test=$isTest displays=${images.length}',
+      );
       final store = ref.read(screenshotStoreProvider);
-      final windowEnd = DateTime.now().toUtc();
+      final windowEnd =
+          (isTest ? DateTime.now() : (_pendingIntervalAt ?? DateTime.now()))
+              .toUtc();
       final windowStart = _productivityWindowStart ?? windowEnd;
       final productivity = await ref
           .read(sessionRepositoryProvider)
@@ -759,6 +839,7 @@ class TrackingController extends Notifier<TrackingUiState> {
           height: image.height,
           pngBytes: image.pngBytes,
           isTestCapture: isTest,
+          persistImage: false,
           metadata: {
             'source': isTest ? 'test_capture' : 'interval',
             if (state.projectName != null) 'projectName': state.projectName,
@@ -767,33 +848,31 @@ class TrackingController extends Notifier<TrackingUiState> {
           },
         );
         final authUser = ref.read(authControllerProvider).user;
-        if (authUser != null && !isTest) {
-          unawaited(() async {
-            try {
-              final objectKey = await ref.read(trackerApiControllerProvider).uploadScreenshotToS3(
-                    user: authUser,
-                    screenshotId: row.id,
-                    sessionId: sessionId,
-                    takenAt: row.takenAt,
-                    takenDay: row.takenDay ?? ScreenshotStore.dayKey(row.takenAt.toLocal()),
-                    filePath: row.filePath,
-                  );
-              if (objectKey != null) {
-                await store.updateUploadStatus(
-                  id: row.id,
-                  status: 'uploaded',
-                  s3ObjectKey: objectKey,
-                  uploadedAt: DateTime.now().toUtc(),
+        if (authUser != null) {
+          try {
+            final objectKey = await ref.read(trackerApiControllerProvider).uploadScreenshotToS3(
+                  user: authUser,
+                  screenshotId: row.id,
+                  sessionId: sessionId,
+                  takenAt: row.takenAt,
+                  takenDay: row.takenDay ?? ScreenshotStore.dayKey(row.takenAt.toLocal()),
+                  pngBytes: image.pngBytes,
+                  displayIndex: row.displayIndex,
                 );
-              }
-            } catch (apiError) {
-              developer.log('Screenshot S3 upload failed: $apiError', name: 'witrack.screenshots');
+            if (objectKey != null) {
               await store.updateUploadStatus(
                 id: row.id,
-                status: 'failed',
+                status: 'uploaded',
+                s3ObjectKey: objectKey,
+                uploadedAt: DateTime.now().toUtc(),
               );
             }
-          }());
+          } catch (apiError) {
+            // ignore: avoid_print
+            print('[witrack.screenshots] Upload failed ${row.id}: $apiError');
+            developer.log('Screenshot S3 upload failed: $apiError', name: 'witrack.screenshots');
+            await store.updateUploadStatus(id: row.id, status: 'failed');
+          }
         }
         last = row.takenAt;
       }

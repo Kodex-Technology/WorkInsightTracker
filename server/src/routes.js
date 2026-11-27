@@ -8,7 +8,7 @@ import {
   isAdminRole,
 } from './roles.js';
 import { requireAuth, requireAdmin } from './auth_middleware.js';
-import { generateScreenshotPresignedUrl } from './s3.js';
+import { generateScreenshotDownloadUrl, generateScreenshotPresignedUrl } from './s3.js';
 
 export function buildRouter() {
   const router = Router();
@@ -19,6 +19,12 @@ export function buildRouter() {
       service: 'witrack-admin-api',
       env: process.env.APP_ENV || 'development',
       projectId: process.env.FIREBASE_PROJECT_ID || null,
+      s3Configured: Boolean(
+        process.env.AWS_S3_BUCKET &&
+        process.env.AWS_REGION &&
+        process.env.AWS_ACCESS_KEY_ID &&
+        process.env.AWS_SECRET_ACCESS_KEY,
+      ),
     });
   });
 
@@ -278,11 +284,13 @@ export function buildRouter() {
         captureDate = new Date().toISOString().substring(0, 10);
       }
 
+      const contentType = req.body.contentType === 'image/png' ? 'image/png' : 'application/octet-stream';
       const result = await generateScreenshotPresignedUrl({
         backendUserId,
         captureDate,
         screenshotId,
         expiresIn: Number(req.body.expiresIn) || 300,
+        contentType,
       });
 
       res.json({
@@ -290,9 +298,32 @@ export function buildRouter() {
         objectKey: result.objectKey,
         uploadUrl: result.uploadUrl,
         expiresIn: result.expiresIn,
+        requiredHeaders: result.requiredHeaders,
       });
     } catch (e) {
       next(e);
+    }
+  });
+
+  router.get('/v1/screenshots/url', async (req, res, next) => {
+    try {
+      const authHeader = req.headers.authorization || '';
+      const match = authHeader.match(/^Bearer\s+(.+)$/i);
+      if (!match) return res.status(401).json({ error: 'Missing Bearer token' });
+      let backendUserId;
+      try {
+        backendUserId = (await getAuth().verifyIdToken(match[1], true)).uid;
+      } catch (_) {
+        backendUserId = req.headers['x-backend-user-id'] || req.query.backendUserId;
+      }
+      const objectKey = req.query.objectKey;
+      if (!backendUserId || typeof objectKey !== 'string' || !objectKey.startsWith(`users/${backendUserId}/`)) {
+        return res.status(403).json({ error: 'Screenshot does not belong to this user' });
+      }
+      const url = await generateScreenshotDownloadUrl({ objectKey, expiresIn: 600 });
+      return res.json({ objectKey, url, expiresIn: 600 });
+    } catch (e) {
+      return next(e);
     }
   });
 
